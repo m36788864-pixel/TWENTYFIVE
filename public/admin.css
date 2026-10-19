@@ -1,0 +1,111 @@
+/* ============================================================
+   TWENTYFIVE — ADMIN STYLESHEET
+   Theme: BLACK / ROUND — deep black, soft outlines, round shapes
+   1. ROOT & BASE
+   2. HEADER
+   3. PANELS & FORMS
+   4. BUTTONS
+   5. MEMBER LIST
+   6. RESPONSIVE
+   ============================================================ */
+
+/* ---------- 1. ROOT & BASE ---------- */
+:root{
+  --bg:#050505;
+  --surface:#101013;
+  --surface2:#16161a;
+  --line:rgba(255,255,255,.13);
+  --line-strong:rgba(255,255,255,.3);
+  --text:#ececef;
+  --muted:#9a9aa3;
+}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at top,#111113,#050505 55%);color:var(--text);font-family:Kanit,sans-serif;min-height:100vh}
+a{color:var(--text)}
+
+/* ---------- 2. HEADER ---------- */
+header{height:78px;padding:0 7%;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;font:10px Orbitron;letter-spacing:1px}
+.brand{display:flex;align-items:center;gap:12px;color:var(--text);font-weight:700}
+.brand b{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;border:1px solid var(--line-strong);color:var(--text);font-size:15px}
+.brand small{display:block;color:var(--muted);font-size:8px;margin-top:5px;letter-spacing:2px}
+
+/* ---------- 3. PANELS & FORMS ---------- */
+main{width:min(1050px,90%);margin:55px auto 90px}
+.panel{background:linear-gradient(180deg,#141418,#0b0b0e);border:1px solid var(--line);border-radius:1.6rem;padding:28px;margin-bottom:22px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 15px 60px rgba(0,0,0,.5)}
+.login{max-width:480px;margin:7vh auto;padding:35px}
+.eyebrow{font:9px Orbitron;letter-spacing:2px;color:#b9b9bf}
+h1{font:700 clamp(25px,4vw,42px) Orbitron;margin:12px 0}
+h1 em{font-style:normal;color:#fff}
+h2{font-size:18px;font-weight:500;margin:0 0 22px}
+.muted{color:var(--muted);font-size:12px}
+.login form{margin-top:25px}
+label{display:flex;flex-direction:column;gap:8px;color:#c4c4c9;font-size:12px;margin-bottom:17px}
+input,select{width:100%;background:#0a0a0d;border:1px solid var(--line);border-radius:14px;padding:13px;color:var(--text);font:13px Kanit;outline:none;transition:border-color .3s}
+input:focus,select:focus{border-color:var(--line-strong)}
+input[type=file]{padding:10px}
+input[type=file]::file-selector-button{margin-right:12px;padding:8px 16px;border-radius:999px;border:1px solid var(--line-strong);background:var(--surface2);color:var(--text);font:600 11px Kanit;cursor:pointer;transition:background .3s}
+input[type=file]::file-selector-button:hover{background:rgba(255,255,255,.07)}
+.photo-preview{display:flex;align-items:center;gap:14px;margin:-6px 0 18px}
+.photo-preview img{width:64px;height:64px;border-radius:50%;object-fit:cover;border:1px solid var(--line-strong)}
+button{cursor:pointer;font-family:inherit}
+.message{font-size:12px;color:#c4c4c9}
+.dash-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px}
+.member-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 18px}
+.member-form label{margin-bottom:18px}
+.full{grid-column:1/-1}
+.form-actions{display:flex;align-items:center;gap:15px;flex-wrap:wrap}
+.list-head{display:flex;justify-content:space-between;align-items:center}
+.list-head h2{margin:0}
+
+/* ---------- 4. BUTTONS ---------- */
+.silver-btn{background:var(--surface2);color:var(--text);border:1px solid var(--line-strong);border-radius:999px;padding:13px 22px;font-weight:600;font-size:12px;transition:all .3s}
+.silver-btn:hover{background:rgba(255,255,255,.07);transform:translateY(-1px)}
+.ghost{border:1px solid var(--line-strong);border-radius:999px;color:var(--text);background:transparent;padding:11px 18px;font-size:11px;transition:border-color .3s,background .3s}
+.ghost:hover{background:rgba(255,255,255,.05)}
+.delete{color:#c98a7c;border:1px solid rgba(201,120,100,.35);border-radius:999px;background:transparent;transition:background .3s}
+.delete:hover{background:rgba(201,120,100,.1)}
+
+/* ---------- 5. MEMBER LIST ---------- */
+.admin-list{display:grid;gap:10px}
+.admin-row{display:flex;align-items:center;gap:14px;padding:13px;border:1px solid var(--line);border-radius:1.2rem;background:#0b0b0e}
+.avatar{width:52px;height:52px;flex-shrink:0;object-fit:cover;border-radius:50%;background:var(--surface2);display:grid;place-items:center;color:var(--muted);font:700 15px Orbitron}
+.admin-row img.avatar{display:block}
+.row-info{flex:1;min-width:0}
+.row-info strong{display:block;overflow-wrap:anywhere}
+.row-info small{color:#b9b9bf;font:8px Orbitron;letter-spacing:1px}
+.row-info p{margin:4px 0 0;color:var(--muted);font-size:11px}
+.row-socials{display:flex;gap:6px;margin-top:6px}
+.row-socials a{padding:3px 10px;border-radius:999px;border:1px solid var(--line);font:700 8px Orbitron;letter-spacing:1px;color:var(--muted);transition:all .3s}
+.row-socials a:hover{color:#fff;border-color:var(--line-strong);background:rgba(255,255,255,.06)}
+.row-actions{display:flex;gap:8px}
+.row-actions button{font-size:10px;padding:8px 12px}
+.empty{color:var(--muted);font-size:12px;padding:20px 0}
+
+/* ---------- 6. RESPONSIVE ---------- */
+@media(max-width:600px){
+  header{padding:0 5%}
+  main{margin-top:30px}
+  .panel{padding:20px}
+  .login{padding:25px}
+  .member-form{grid-template-columns:1fr}
+  .full{grid-column:auto}
+  .dash-title{align-items:flex-start;gap:12px}
+  .dash-title h1{font-size:24px}
+  .admin-row{align-items:flex-start;flex-wrap:wrap}
+  .row-info{min-width:calc(100% - 70px)}
+  .row-actions{margin-left:66px}
+}
+
+
+/* ---------- 5b. CATEGORY TABS & GROUPED LIST ---------- */
+.admin-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:18px 0 20px}
+.admin-tabs .tab{padding:9px 16px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--muted);font:700 9px Orbitron;letter-spacing:1.5px;transition:all .3s}
+.admin-tabs .tab:hover{color:#fff;border-color:var(--line-strong)}
+.admin-tabs .tab.active{background:#f2f2f4;color:#0a0a0c;border-color:#f2f2f4}
+.tier-head{--c:255,255,255;display:flex;align-items:center;gap:10px;margin:14px 0 2px;font:700 9px Orbitron;letter-spacing:2.5px;color:rgb(var(--c))}
+.tier-head::after{content:"";flex:1;height:1px;background:rgba(var(--c),.3)}
+.tier-head b{order:2;padding:2px 9px;border-radius:999px;border:1px solid rgba(var(--c),.4);font-size:8px}
+.tier-head:first-child{margin-top:0}
+.tier-boss{--c:230,181,40}.tier-leader{--c:40,150,255}.tier-support{--c:235,50,50}.tier-member{--c:185,185,191}
+.admin-row.tier-boss,.admin-row.tier-leader,.admin-row.tier-support{border-color:rgba(var(--c),.35)}
+.tier-badge{display:inline-block;padding:2px 8px;margin-right:4px;border-radius:999px;border:1px solid rgba(var(--c),.5);color:rgb(var(--c));font-size:8px}

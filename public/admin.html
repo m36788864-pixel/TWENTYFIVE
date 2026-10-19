@@ -1,0 +1,290 @@
+
+<!doctype html>
+<html lang="th">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>TWENTYFIVE | ADMIN</title>
+
+    <!-- Google Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&family=Orbitron:wght@400;600;700&display=swap"
+        rel="stylesheet"
+    >
+
+    <!-- Admin CSS -->
+    <link rel="stylesheet" href="/admin.css">
+</head>
+
+<body>
+
+    <!-- Header -->
+    <header>
+        <a href="/" class="brand">
+            <b>25</b>
+
+            <span>
+                TWENTYFIVE
+                <small>ADMIN CONSOLE</small>
+            </span>
+        </a>
+
+        <a href="/">
+            ← VIEW WEBSITE
+        </a>
+    </header>
+
+    <main>
+
+        <!-- Admin Login -->
+        <section id="login-panel" class="panel login">
+
+            <p class="eyebrow">
+                RESTRICTED ACCESS
+            </p>
+
+            <h1>
+                ADMIN <em>LOGIN</em>
+            </h1>
+
+            <p class="muted">
+                เข้าสู่ระบบเพื่อจัดการรายชื่อสมาชิก
+            </p>
+
+            <form id="login-form">
+
+                <label>
+                    ชื่อผู้ใช้
+
+                    <input
+                        name="username"
+                        autocomplete="username"
+                        required
+                        value="admin"
+                    >
+                </label>
+
+                <label>
+                    รหัสผ่าน
+
+                    <input
+                        name="password"
+                        type="password"
+                        autocomplete="current-password"
+                        required
+                    >
+                </label>
+
+                <button class="silver-btn" type="submit">
+                    เข้าสู่ระบบ ↗
+                </button>
+
+                <p id="login-msg" class="message"></p>
+
+            </form>
+        </section>
+
+        <!-- Admin Dashboard -->
+        <section id="dashboard" hidden>
+
+            <div class="dash-title">
+
+                <div>
+                    <p class="eyebrow">
+                        MEMBER MANAGEMENT
+                    </p>
+
+                    <h1>
+                        MEMBERS <em>DATABASE</em>
+                    </h1>
+                </div>
+
+                <button id="logout" class="ghost">
+                    ออกจากระบบ
+                </button>
+
+            </div>
+
+            <!-- Member Form -->
+            <div class="panel">
+
+                <h2 id="form-title">
+                    เพิ่มสมาชิกใหม่
+                </h2>
+
+                <form id="member-form" class="member-form">
+
+                    <input
+                        type="hidden"
+                        name="id"
+                    >
+
+                    <label>
+                        ชื่อสมาชิก *
+
+                        <input
+                            name="name"
+                            maxlength="80"
+                            required
+                            placeholder="ชื่อที่แสดง"
+                        >
+                    </label>
+
+                    <label>
+                        ตำแหน่ง
+
+                        <input
+                            name="role"
+                            maxlength="40"
+                            placeholder="ข้อความที่แสดงบนการ์ด เช่น BOSS, LEADER, MEMBER"
+                        >
+                    </label>
+
+                    <label>
+                        หมวดหมู่
+
+                        <select name="group">
+                            <option value="BOSS">BOSS</option>
+                            <option value="LEADER">LEADER</option>
+                            <option value="SUPPORT">SUPPORT</option>
+                            <option value="MEMBER" selected>MEMBER</option>
+                        </select>
+                    </label>
+
+                    <label>
+                        ลิงก์รูปภาพ (URL)
+
+                        <input
+                            name="image"
+                            type="url"
+                            placeholder="https://... หรือเว้นว่างเพื่อใช้รูปจากเครื่องด้านล่าง"
+                        >
+                    </label>
+
+                    <label>
+                        รูปจากเครื่อง (สูงสุด 4MB)
+
+                        <input
+                            name="photo"
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp,image/gif"
+                        >
+                    </label>
+
+                    <div
+                        id="photo-preview"
+                        class="photo-preview full"
+                        hidden
+                    >
+                        <img
+                            id="photo-preview-img"
+                            alt="ตัวอย่างรูป"
+                        >
+
+                        <span class="muted">
+                            รูปที่เลือกจะถูกอัปโหลดตอนกดบันทึก
+                        </span>
+                    </div>
+
+                    <label>
+                        ลิงก์ Discord / โปรไฟล์ (URL)
+                        <input name="discord" type="url" placeholder="https://discord.gg/... หรือโปรไฟล์สมาชิก">
+                    </label>
+
+                    <label>
+                        ลิงก์เฟซบุ๊ก (URL)
+
+                        <input
+                            name="facebook"
+                            type="url"
+                            placeholder="https://facebook.com/..."
+                        >
+                    </label>
+
+                    <label>
+                        ลิงก์ติ๊กต๊อก (URL)
+
+                        <input
+                            name="tiktok"
+                            type="url"
+                            placeholder="https://tiktok.com/@..."
+                        >
+                    </label>
+
+                    <label class="full">
+                        คำอธิบายสั้น ๆ
+
+                        <input
+                            name="description"
+                            maxlength="240"
+                            placeholder="ข้อมูลเพิ่มเติม"
+                        >
+                    </label>
+
+                    <!-- Form Buttons -->
+                    <div class="form-actions full">
+
+                        <button
+                            class="silver-btn"
+                            type="submit"
+                        >
+                            บันทึกสมาชิก
+                        </button>
+
+                        <button
+                            id="cancel-edit"
+                            class="ghost"
+                            type="button"
+                            hidden
+                        >
+                            ยกเลิกแก้ไข
+                        </button>
+
+                        <span
+                            id="form-msg"
+                            class="message"
+                        ></span>
+
+                    </div>
+                </form>
+            </div>
+
+            <!-- Member List -->
+            <div class="panel">
+
+                <div class="list-head">
+
+                    <h2>
+                        รายชื่อทั้งหมด
+                    </h2>
+
+                    <span
+                        id="total"
+                        class="muted"
+                    ></span>
+
+                </div>
+
+                <div id="admin-tabs" class="admin-tabs">
+                    <button type="button" class="tab active" data-tier="ALL">ALL</button>
+                    <button type="button" class="tab" data-tier="BOSS">BOSS</button>
+                    <button type="button" class="tab" data-tier="LEADER">LEADER</button>
+                    <button type="button" class="tab" data-tier="SUPPORT">SUPPORT</button>
+                    <button type="button" class="tab" data-tier="MEMBER">MEMBER</button>
+                </div>
+
+                <div
+                    id="admin-list"
+                    class="admin-list"
+                ></div>
+
+            </div>
+        </section>
+    </main>
+
+    <!-- Admin JavaScript -->
+    <script src="/admin.js"></script>
+
+</body>
+</html>

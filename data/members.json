@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "name": "TWENTYFIVE",
+    "role": "FOUNDER",
+    "group": "BOSS",
+    "image": "",
+    "description": "ตัวอย่างสมาชิก — แก้ไขหรือลบได้จากหลังบ้าน"
+  },
+  {
+    "id": 2,
+    "name": "MEMBER 01",
+    "role": "MEMBER",
+    "group": "MEMBER",
+    "image": "",
+    "description": "ตัวอย่างข้อมูลสมาชิก"
+  },
+  {
+    "id": 3,
+    "name": "MEMBER 02",
+    "role": "MEMBER",
+    "group": "MEMBER",
+    "image": "",
+    "description": "ตัวอย่างข้อมูลสมาชิก"
+  }
+]

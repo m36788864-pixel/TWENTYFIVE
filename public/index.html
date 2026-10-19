@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#050505">
+  <meta name="description" content="TWENTYFIVE — Member Directory">
+  <title>TWENTYFIVE | MEMBERS</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Orbitron:wght@400;600;700;800;900&family=Rajdhani:wght@400;500;600;700&family=Teko:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <!-- LOADING SCREEN -->
+  <div id="intro" class="intro">
+    <div class="intro-grid"></div>
+    <div class="intro-core">
+      <div class="intro-glow"></div>
+      <div class="intro-ring intro-ring-a"></div>
+      <div class="intro-ring intro-ring-b"></div>
+      <img class="intro-logo" src="/logo.png" alt="TWENTYFIVE">
+    </div>
+    <div class="intro-status">
+      <div class="intro-percent" id="intro-percent">0%</div>
+      <div class="intro-type" id="intro-type">INITIALIZING KERNEL...</div>
+    </div>
+  </div>
+
+  <!-- CUSTOM CURSOR -->
+  <div class="cursor-dot" id="cursor-dot"></div>
+  <div class="cursor-ring" id="cursor-ring"></div>
+
+  <!-- ATMOSPHERE -->
+  <div class="grain"></div><div class="vignette"></div>
+  <div class="orb orb-one"></div><div class="orb orb-two"></div>
+  <div class="side-label side-left">SYS.OP // NO. 25 // SECURE</div>
+  <div class="side-label side-right">TWENTYFIVE // ELITE COLLECTIVE</div>
+
+  <!-- NAV -->
+  <header class="nav">
+    <a class="brand" href="#home">
+      <span class="brand-icon"><img src="/logo.png" alt="TWENTYFIVE"></span>
+      <span>TWENTYFIVE<small>MEMBER DIRECTORY</small></span>
+    </a>
+    <nav class="nav-links">
+      <a href="#home">HQ</a>
+      <a href="#members">ROSTER</a>
+      <a href="#about">ABOUT</a>
+    </nav>
+    <button class="nav-burger" id="nav-burger" aria-label="menu"><span></span><span></span><span></span></button>
+  </header>
+
+  <main>
+    <!-- HERO -->
+    <section class="hero" id="home">
+      <div class="hero-copy reveal">
+        <p class="hero-overline">ONE NAME. ONE LEGACY.</p>
+        <h1 class="glitch" data-text="TWENTYFIVE">TWENTYFIVE</h1>
+        <div class="hero-rule"><span></span></div>
+        <p class="hero-tagline">BUILT ON LOYALTY · DEFINED BY LEGACY</p>
+        <p class="hero-desc">พื้นที่รวมสมาชิกและตัวตนของ TWENTYFIVE<br>ทุกคนมีบทบาท ทุกชื่อมีความหมาย</p>
+        <a class="cta-button" href="#members">EXPLORE MEMBERS <span>↘</span></a>
+      </div>
+
+      <div class="hero-art reveal">
+        <div class="art-corner c-tl"></div><div class="art-corner c-tr"></div>
+        <div class="art-corner c-bl"></div><div class="art-corner c-br"></div>
+        <div class="ring ring-a"></div>
+        <div class="ring ring-b"></div>
+        <div class="ring ring-c"></div>
+        <div class="emblem"><img src="/logo.png" alt="TWENTYFIVE LOGO"></div>
+        <div class="art-caption">EST. TWENTYFIVE<br><b>LOYALTY / RESPECT / UNITY</b></div>
+      </div>
+
+      <div class="hero-foot"><span>SCROLL TO DISCOVER</span><span>01 / 03</span></div>
+    </section>
+
+    <!-- MEMBERS -->
+    <section class="members-section" id="members">
+      <div class="section-heading reveal">
+        <div><p class="eyebrow"><span></span> THE PEOPLE BEHIND THE NAME</p><h2>OUR <em>MEMBERS</em></h2></div>
+        <p class="section-note">A COMMUNITY IS BUILT BY ITS PEOPLE.</p>
+      </div>
+      <div class="roster-bar">
+        <div id="filters" class="tier-tabs">
+          <button class="filter active" data-group="ALL">ALL</button>
+          <button class="filter" data-group="BOSS">BOSS</button>
+          <button class="filter" data-group="LEADER">LEADER</button>
+          <button class="filter" data-group="SUPPORT">SUPPORT</button>
+          <button class="filter" data-group="MEMBER">MEMBER</button>
+        </div>
+        <label class="op-search"><input id="search" type="search" placeholder="SEARCH OPERATIVE" autocomplete="off"></label>
+      </div>
+      <div id="count" class="count" hidden></div>
+      <div id="member-grid" class="tier-wrap"><div class="loading">INITIALIZING DIRECTORY<span>...</span></div></div>
+      <p id="empty" class="empty" hidden>ไม่พบสมาชิกที่ตรงกับคำค้นหา</p>
+    </section>
+
+    <!-- ABOUT -->
+    <section class="about" id="about">
+      <p class="eyebrow"><span></span> MORE THAN A NAME</p>
+      <h2>UNITED BY <em>LOYALTY.</em></h2>
+      <p>TWENTYFIVE — Built together. Remembered forever.</p>
+      <div class="values">
+        <span>01 / RESPECT</span>
+        <span>02 / LOYALTY</span>
+        <span>03 / UNITY</span>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <img class="footer-logo" src="/logo.png" alt="TWENTYFIVE">
+    <a class="brand" href="#"><span class="brand-icon"><img src="/logo.png" alt="TWENTYFIVE"></span><span>TWENTYFIVE<small>MEMBER DIRECTORY</small></span></a>
+    <span>© <span id="year"></span> TWENTYFIVE. ALL RIGHTS RESERVED.</span>
+  </footer>
+
+  <!-- MEMBER PROFILE MODAL -->
+  <div class="profile-overlay" id="profile-overlay" aria-hidden="true">
+    <section class="profile-modal" role="dialog" aria-modal="true" aria-labelledby="profile-name">
+      <button class="profile-close" id="profile-close" aria-label="Close profile">×</button>
+      <div class="profile-left">
+        <div class="profile-avatar" id="profile-avatar"><span>25</span></div>
+        <span class="profile-member-tag" id="profile-role">MEMBER</span>
+        <h2 id="profile-name">MEMBER NAME</h2>
+        <p class="profile-id" id="profile-id">NO. 01 / TWENTYFIVE</p>
+      </div>
+      <div class="profile-right">
+        <div class="profile-status"><span class="status-dot"></span><span>MEMBER PROFILE</span><small id="profile-group">MEMBERS</small></div>
+        <div class="profile-divider"></div>
+        <p class="profile-kicker">// IDENTITY_ARCHIVE_DECRYPTED</p>
+        <div class="profile-data-panel">
+          <span class="profile-watermark">✕</span>
+          <small>PERSONAL DOSSIER</small>
+          <p id="profile-description">TWENTYFIVE COLLECTIVE</p>
+        </div>
+        <div class="profile-footer">
+          <p>LOYALTY · RESPECT · UNITY</p>
+          <div class="profile-actions" id="profile-actions"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="/app.js"></script>
+</body></html>
