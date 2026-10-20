@@ -134,6 +134,12 @@ const revealObserver = new IntersectionObserver((entries) => {
 document.querySelectorAll(".reveal").forEach((el) => revealObserver.observe(el));
 
 /* ---------- 7. MEMBER DIRECTORY ---------- */
+const THEMES = ["gold", "silver", "ice", "rose", "mint", "violet"];
+const PATTERNS = ["plain", "grid", "dots", "glow"];
+/* ลายบอร์ดที่เจ้าของเลือกไว้ (validate อีกชั้นฝั่งหน้าเว็บ) */
+function boardTheme(m) { return THEMES.includes(m && m.theme) ? m.theme : ""; }
+function boardPattern(m) { return PATTERNS.includes(m && m.pattern) ? m.pattern : ""; }
+
 const TIERS = [
   { key: "BOSS",    icon: "■" , label: "BOSS" },
   { key: "LEADER",  icon: "◆", label: "LEADER" },
@@ -151,14 +157,22 @@ function tierOf(m) {
 }
 
 function cardHTML(m, tier, i) {
-  const fb = safeURL(m.facebook);
-  const fbBtn = fb
-    ? `<a class="op-social" href="${escapeHTML(fb)}" target="_blank" rel="noopener" aria-label="Facebook">${SOCIAL_ICONS.facebook}</a>`
-    : `<span class="op-social off" aria-hidden="true">${SOCIAL_ICONS.facebook}</span>`;
   const t = TIERS.find((x) => x.key === tier);
+  const socials = ["facebook", "tiktok"].map((network) => {
+    const url = safeURL(m[network]);
+    const label = network === "facebook" ? "Facebook" : "TikTok";
+    return url
+      ? `<a class="op-social" href="${escapeHTML(url)}" target="_blank" rel="noopener" aria-label="${label}">${SOCIAL_ICONS[network]}</a>`
+      : `<span class="op-social off" aria-hidden="true">${SOCIAL_ICONS[network]}</span>`;
+  }).join("");
   const idText = "ID-" + String(m.id).slice(-4).padStart(4, "0");
+  const num = String(i + 1).padStart(2, "0");
+  const theme = boardTheme(m);
+  const classes = ["op-card", `tier-${tier.toLowerCase()}`, theme ? `board-${theme}` : ""].filter(Boolean).join(" ");
   return `
-    <article class="op-card tier-${tier.toLowerCase()}" data-member-id="${escapeHTML(m.id)}" tabindex="0" role="button" aria-label="ดูโปรไฟล์ ${escapeHTML(m.name)}" style="animation-delay:${Math.min(i * 40, 400)}ms">
+    <article class="${classes}" data-member-id="${escapeHTML(m.id)}" tabindex="0" role="button" aria-label="ดูโปรไฟล์ ${escapeHTML(m.name)}" style="animation-delay:${Math.min(i * 45, 420)}ms">
+      <span class="op-ghost" aria-hidden="true">${num}</span>
+      <div class="op-top"><span class="op-chip"><i></i>${t.label}</span></div>
       <div class="op-avatar">
         ${m.image ? `<img src="${escapeHTML(m.image)}" alt="" loading="lazy" onerror="this.remove()">` : `<b>25</b>`}
         <i class="op-dot"></i>
@@ -166,9 +180,12 @@ function cardHTML(m, tier, i) {
       <div class="op-info">
         <span class="op-tag"><em>${t.icon}</em>${escapeHTML(m.role || t.label)}</span>
         <strong class="op-name" title="${escapeHTML(m.name)}">${escapeHTML(m.name)}</strong>
-        <span class="op-id"><s></s>${idText}</span>
+        <p class="op-desc">${escapeHTML(m.tagline || m.description || "TWENTYFIVE COLLECTIVE")}</p>
       </div>
-      ${fbBtn}
+      <div class="op-foot">
+        <span class="op-id"><s></s>${idText}</span>
+        <div class="op-actions">${socials}</div>
+      </div>
     </article>`;
 }
 
@@ -176,19 +193,29 @@ function render() {
   const query = search.value.trim().toLowerCase();
   const list = members.filter((m) =>
     (activeGroup === "ALL" || tierOf(m) === activeGroup) &&
-    [m.name, m.role, m.group, m.description].some((v) => String(v || "").toLowerCase().includes(query))
+    [m.name, m.role, m.group, m.description, m.tagline, m.bio].some((v) => String(v || "").toLowerCase().includes(query))
   );
 
-  if (count) count.textContent = `${String(list.length).padStart(2, "0")} MEMBERS FOUND`;
+  if (count) {
+    count.innerHTML = `<b>${String(list.length).padStart(2, "0")}</b> MEMBERS FOUND`;
+    count.hidden = false;
+  }
 
   let n = 0;
-  grid.innerHTML = TIERS.map((t) => {
+  grid.innerHTML = TIERS.map((t, ti) => {
     const rows = list.filter((m) => tierOf(m) === t.key);
     if (!rows.length) return "";
+    const cards = rows.map((m) => cardHTML(m, t.key, n++)).join("");
+    const unit = rows.length === 1 ? "OPERATIVE" : "OPERATIVES";
     return `
-      <section class="tier-block">
-        <h3 class="tier-title"><span></span>${t.label} TIER<span></span></h3>
-        <div class="tier-grid">${rows.map((m) => cardHTML(m, t.key, n++)).join("")}</div>
+      <section class="tier-block tier-${t.key.toLowerCase()}">
+        <header class="tier-head">
+          <span class="tier-num">${String(ti + 1).padStart(2, "0")}</span>
+          <h3 class="tier-title">${t.label}</h3>
+          <span class="tier-line"></span>
+          <span class="tier-count"><b>${String(rows.length).padStart(2, "0")}</b> ${unit}</span>
+        </header>
+        <div class="tier-grid">${cards}</div>
       </section>`;
   }).join("");
 
@@ -220,6 +247,11 @@ document.getElementById("filters").addEventListener("click", (e) => {
 /* ---------- 8. MEMBER PROFILE MODAL ---------- */
 function openProfile(member) {
   if (!member) return;
+  const modal = document.querySelector(".profile-modal");
+  const theme = boardTheme(member);
+  const pattern = boardPattern(member);
+  modal.className = ["profile-modal", theme ? `board-${theme}` : "", pattern ? `pat-${pattern}` : ""].filter(Boolean).join(" ");
+
   const avatar = document.getElementById("profile-avatar");
   avatar.innerHTML = member.image
     ? `<img src="${escapeHTML(member.image)}" alt="${escapeHTML(member.name)}" onerror="this.remove()"><span class="profile-avatar-fallback">25</span>`
@@ -228,8 +260,16 @@ function openProfile(member) {
   document.getElementById("profile-name").textContent = member.name || "MEMBER";
   document.getElementById("profile-role").textContent = member.role || "MEMBER";
   document.getElementById("profile-group").textContent = member.group || "MEMBERS";
+
+  const tagline = document.getElementById("profile-tagline");
+  tagline.textContent = member.tagline || "";
+  tagline.hidden = !member.tagline;
+
+  const statusText = document.getElementById("profile-status-text");
+  if (statusText) statusText.textContent = member.status || "MEMBER PROFILE";
+
   document.getElementById("profile-id").textContent = `NO. ${String(member.id || "--").padStart(2, "0")} / TWENTYFIVE`;
-  document.getElementById("profile-description").textContent = member.description || "TWENTYFIVE COLLECTIVE";
+  document.getElementById("profile-description").textContent = member.bio || member.description || "TWENTYFIVE COLLECTIVE";
 
   const actions = [];
   const discord = safeURL(member.discord);
@@ -238,6 +278,8 @@ function openProfile(member) {
     const url = safeURL(member[network]);
     if (url) actions.push(`<a class="profile-link" href="${escapeHTML(url)}" target="_blank" rel="noopener">${network.toUpperCase()} ↗</a>`);
   }
+  const drive = safeURL(member.driveLink);
+  if (drive) actions.push(`<a class="profile-link" href="${escapeHTML(drive)}" target="_blank" rel="noopener">DRIVE ↗</a>`);
   if (!actions.length) actions.push('<span class="profile-no-links">NO PUBLIC LINKS PROVIDED</span>');
   document.getElementById("profile-actions").innerHTML = actions.join("");
   profileOverlay.classList.add("open");
@@ -256,6 +298,14 @@ grid.addEventListener("click", (event) => {
   if (event.target.closest("a")) return;
   const card = event.target.closest(".op-card");
   if (card) openProfile(members.find((member) => String(member.id) === card.dataset.memberId));
+});
+/* spotlight: แสงไล่ตามเมาส์ภายในการ์ด */
+grid.addEventListener("pointermove", (event) => {
+  const card = event.target.closest(".op-card");
+  if (!card) return;
+  const box = card.getBoundingClientRect();
+  card.style.setProperty("--mx", `${(((event.clientX - box.left) / box.width) * 100).toFixed(1)}%`);
+  card.style.setProperty("--my", `${(((event.clientY - box.top) / box.height) * 100).toFixed(1)}%`);
 });
 grid.addEventListener("keydown", (event) => {
   if ((event.key === "Enter" || event.key === " ") && event.target.matches(".op-card")) {

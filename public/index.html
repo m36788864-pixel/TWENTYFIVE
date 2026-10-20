@@ -46,6 +46,8 @@
       <a href="#home">HQ</a>
       <a href="#members">ROSTER</a>
       <a href="#about">ABOUT</a>
+      <a href="/apply">JOIN</a>
+      <a href="/board">MY BOARD</a>
     </nav>
     <button class="nav-burger" id="nav-burger" aria-label="menu"><span></span><span></span><span></span></button>
   </header>
@@ -78,8 +80,9 @@
     <!-- MEMBERS -->
     <section class="members-section" id="members">
       <div class="section-heading reveal">
-        <div><p class="eyebrow"><span></span> THE PEOPLE BEHIND THE NAME</p><h2>OUR <em>MEMBERS</em></h2></div>
-        <p class="section-note">A COMMUNITY IS BUILT BY ITS PEOPLE.</p>
+        <div class="head-main"><p class="eyebrow"><span></span> THE PEOPLE BEHIND THE NAME</p><h2>OUR <em>MEMBERS</em></h2></div>
+        <div class="head-seal" aria-hidden="true"><span>25</span></div>
+        <p class="section-note">A COMMUNITY<br>IS BUILT BY ITS PEOPLE.</p>
       </div>
       <div class="roster-bar">
         <div id="filters" class="tier-tabs">
@@ -90,8 +93,8 @@
           <button class="filter" data-group="MEMBER">MEMBER</button>
         </div>
         <label class="op-search"><input id="search" type="search" placeholder="SEARCH OPERATIVE" autocomplete="off"></label>
+        <div id="count" class="count" hidden></div>
       </div>
-      <div id="count" class="count" hidden></div>
       <div id="member-grid" class="tier-wrap"><div class="loading">INITIALIZING DIRECTORY<span>...</span></div></div>
       <p id="empty" class="empty" hidden>ไม่พบสมาชิกที่ตรงกับคำค้นหา</p>
     </section>
@@ -123,10 +126,11 @@
         <div class="profile-avatar" id="profile-avatar"><span>25</span></div>
         <span class="profile-member-tag" id="profile-role">MEMBER</span>
         <h2 id="profile-name">MEMBER NAME</h2>
+        <p class="profile-tagline" id="profile-tagline" hidden></p>
         <p class="profile-id" id="profile-id">NO. 01 / TWENTYFIVE</p>
       </div>
       <div class="profile-right">
-        <div class="profile-status"><span class="status-dot"></span><span>MEMBER PROFILE</span><small id="profile-group">MEMBERS</small></div>
+        <div class="profile-status"><span class="status-dot"></span><span id="profile-status-text">MEMBER PROFILE</span><small id="profile-group">MEMBERS</small></div>
         <div class="profile-divider"></div>
         <p class="profile-kicker">// IDENTITY_ARCHIVE_DECRYPTED</p>
         <div class="profile-data-panel">

@@ -14,3 +14,31 @@ services:
         sync: false
       - key: SESSION_SECRET
         generateValue: true
+      - key: PUBLIC_URL
+        sync: false
+      - key: DISCORD_BOT_TOKEN
+        sync: false
+      - key: DISCORD_GUILD_ID
+        sync: false
+      # สำรองข้อมูลขึ้น GitHub (เข้ารหัส) — จำเป็นถ้าใช้ Render ฟรี ที่ดิสก์ถูกล้างทุกครั้งที่ deploy/restart
+      - key: BACKUP_KEY
+        sync: false
+      - key: BACKUP_GITHUB_TOKEN
+        sync: false
+      - key: BACKUP_REPO
+        sync: false
+      - key: BACKUP_BRANCH
+        value: data-backup
+      # ส่งข้อมูลขึ้น Google ชีต (ไม่บังคับ) — ผ่าน Apps Script Web App ดูโค้ดใน google-sheets/apps-script.gs
+      - key: SHEETS_WEBHOOK_URL
+        sync: false
+      - key: SHEETS_SECRET
+        sync: false
+      - key: SHEETS_INTERVAL
+        value: "20"
+      # ส่งข้อมูลขึ้นชีตอัตโนมัติทุกกี่วินาที แม้ไม่มีการแก้ไข (ให้มีสำเนาอยู่เสมอ กดกู้ได้ทุกเมื่อ)
+      - key: SHEETS_KEEPALIVE
+        value: "300"
+      # ลิงก์เชิญเข้ากลุ่มดิสคอร์ดของแก๊ง (ใช้ในข้อความ DM)
+      - key: DISCORD_INVITE
+        value: https://discord.gg/rZBmUgYtx2

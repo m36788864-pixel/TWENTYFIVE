@@ -106,6 +106,108 @@
 
             </div>
 
+            <!-- Applications Inbox (สมัครเข้าแก๊ง) -->
+            <div class="panel" id="applications-panel">
+
+                <div class="list-head">
+
+                    <div>
+                        <h2>ใบสมัครเข้าแก๊ง</h2>
+                        <p class="muted" style="margin:6px 0 0">
+                            กดรับเข้าแก๊ง → ระบบออกชื่อผู้ใช้ + รหัสผ่าน แล้วส่งให้ผู้สมัครทาง DM ดิสคอร์ด
+                        </p>
+                    </div>
+
+                    <span id="apply-count" class="badge pending"><i></i>0 รอตรวจ</span>
+
+                </div>
+
+                <div id="apply-tabs" class="admin-tabs">
+                    <button type="button" class="tab active" data-status="pending">รอตรวจ</button>
+                    <button type="button" class="tab" data-status="approved">รับเข้าแล้ว</button>
+                    <button type="button" class="tab" data-status="rejected">ไม่ผ่าน</button>
+                    <button type="button" class="tab" data-status="ALL">ทั้งหมด</button>
+                </div>
+
+                <div id="apply-list" class="apply-list"></div>
+
+            </div>
+
+            <!-- Backup / Seed status -->
+            <div class="panel seed-panel">
+                <div class="seed-row">
+                    <div>
+                        <h2 style="margin-bottom:6px">ข้อมูลสำรอง (seed)</h2>
+                        <p class="muted" id="seed-msg" style="margin:0">กำลังตรวจสอบ...</p>
+                    </div>
+                    <span id="seed-badge" class="badge"><i></i>SEED</span>
+                    <button class="ghost" id="seed-backup" type="button">สำรองข้อมูลเดี๋ยวนี้</button>
+                </div>
+                <div class="cloud-row">
+                    <div style="min-width:240px">
+                        <h3>สำรองขึ้น GitHub (เข้ารหัส AES-256)</h3>
+                        <p class="muted" id="cloud-msg" style="margin:0">กำลังตรวจสอบ...</p>
+                    </div>
+                    <span id="cloud-badge" class="badge"><i></i>CLOUD</span>
+                </div>
+                <details class="discord-help">
+                    <summary>วิธีตั้งค่าให้ข้อมูลอยู่รอดหลัง deploy (ใช้กับ Render ฟรี)</summary>
+                    <ol>
+                        <li>สร้าง repo เปล่าบน GitHub (แนะนำ repo <b>ส่วนตัว</b> เช่น <code>twentyfive-backup</code>)</li>
+                        <li>สร้าง <b>Token</b>: Settings → Developer settings → Personal access tokens → classic (สิทธิ์ <code>repo</code>) หรือ fine-grained (สิทธิ์ Contents: <b>Read and write</b>)</li>
+                        <li>ตั้งตัวแปรแวดล้อมบน Render: <code>BACKUP_KEY</code> (รหัสลับเข้ารหัสอะไรก็ได้ เก็บไว้ให้ดี หาย = กู้ข้อมูลไม่ได้), <code>BACKUP_GITHUB_TOKEN</code>, <code>BACKUP_REPO</code> (รูปแบบ <code>owner/repo</code>)</li>
+                        <li>ระบบจะเข้ารหัสและ push ขึ้น branch <code>data-backup</code> ให้เองทุกครั้งที่มีการบันทึก (ไม่เกินทุก 30 วินาที)</li>
+                        <li>พอ deploy เสร็จ ดิสก์ Render ฟรีจะว่าง — ระบบจะ <b>ดึงข้อมูลจาก GitHub → ถอดรหัส → เติมกลับให้เอง</b> ตอนเปิดเซิร์ฟเวอร์</li>
+                    </ol>
+                </details>
+                <div class="cloud-row">
+                    <div style="min-width:240px">
+                        <h3>ส่งข้อมูลขึ้น Google ชีต</h3>
+                        <p class="muted" id="sheets-msg" style="margin:0">กำลังตรวจสอบ...</p>
+                    </div>
+                    <span id="sheets-badge" class="badge"><i></i>SHEET</span>
+                    <div class="row-buttons">
+                        <button class="ghost" id="sheets-sync" type="button">ส่งขึ้นชีตเดี๋ยวนี้</button>
+                        <button class="ghost" id="sheets-restore" type="button">กู้ข้อมูลจากชีตกลับมา</button>
+                    </div>
+                </div>
+                <p class="restore-hint" id="sheets-hint" hidden></p>
+                <details class="discord-help">
+                    <summary>วิธีตั้งค่าให้ส่งข้อมูลเข้า Google ชีตอัตโนมัติ (และกู้กลับได้)</summary>
+                    <ol>
+                        <li>เปิด Google ชีตใหม่ 1 ไฟล์ → เมนู <b>Extensions (ส่วนขยาย) → Apps Script</b></li>
+                        <li>วางโค้ดจากไฟล์ <code>google-sheets/apps-script.gs</code> แทนโค้ดเดิม แล้วตั้ง <code>TOKEN</code> เป็นรหัสลับของคุณ</li>
+                        <li><b>Deploy → New deployment → Web app</b> · Execute as: <b>Me</b> · Who has access: <b>Anyone</b> แล้วคัดลอก URL ที่ลงท้าย <code>/exec</code></li>
+                        <li>ตั้งตัวแปรแวดล้อม: <code>SHEETS_WEBHOOK_URL</code> = URL นั้น และ <code>SHEETS_SECRET</code> = รหัสเดียวกับ <code>TOKEN</code></li>
+                        <li>จากนี้ชีต <b>Applications</b> (ใบสมัคร) และ <b>Members</b> (รายชื่อสมาชิก) จะถูกสร้างและอัปเดตให้เองทุกครั้งที่มีการบันทึก</li>
+                        <li><b>กู้คืน:</b> ระบบเก็บสำเนาข้อมูลดิบไว้ในชีตลับ <code>_raw</code> ทุกครั้งที่ส่ง (อย่าลบชีตนี้) — ถ้าดิสก์เซิร์ฟเวอร์หาย ระบบจะดึงกลับให้เองตอนเปิดเซิร์ฟเวอร์ หรือกดปุ่ม <b>กู้ข้อมูลจากชีตกลับมา</b> ได้ทันที</li>
+                    </ol>
+                    <p class="muted" style="margin:10px 0 0">▲ ชีต Members มีคอลัมน์ชื่อผู้ใช้/รหัสผ่านบอร์ด — ควรตั้งชีตเป็น <b>ส่วนตัว</b> ไม่แชร์เป็นสาธารณะ<br>▲ แก้ข้อมูลในชีตด้วยมือไม่มีผลกับเว็บ (ระบบเขียนทับทุกครั้ง) — ให้แก้ที่หน้าแอดมินหรือบอร์ดแทน</p>
+                </details>
+            </div>
+
+            <!-- Discord bot status -->
+            <div class="panel seed-panel" id="discord-panel">
+                <div class="seed-row">
+                    <div style="min-width:240px">
+                        <h2 style="margin-bottom:6px">บอทส่ง DM อัตโนมัติ</h2>
+                        <p class="muted" id="discord-msg" style="margin:0">กำลังตรวจสอบ...</p>
+                    </div>
+                    <span id="discord-badge" class="badge"><i></i>DM</span>
+                    <button class="ghost" id="discord-check" type="button">ตรวจสอบการเชื่อมต่อ</button>
+                </div>
+                <details class="discord-help">
+                    <summary>วิธีตั้งค่าให้บอทส่งข้อความเองอัตโนมัติ</summary>
+                    <ol>
+                        <li>สร้างแอปที่ <b>discord.com/developers/applications</b> → แท็บ <b>Bot</b> → คัดลอก <b>Token</b> แล้วตั้งเป็นตัวแปรแวดล้อม <code>DISCORD_BOT_TOKEN</code></li>
+                        <li>เปิด <b>SERVER MEMBERS INTENT</b> ในแท็บ Bot (ถ้าอยากให้บอทค้นหา User ID จากชื่อผู้ใช้)</li>
+                        <li>เชิญบอทเข้าเซิร์ฟเวอร์ของคุณ (OAuth2 → scope <code>bot</code>) แล้วตั้ง <code>DISCORD_GUILD_ID</code> เป็นไอดีเซิร์ฟเวอร์</li>
+                        <li>ผู้สมัครต้องอยู่เซิร์ฟเวอร์เดียวกับบอท และเปิดรับ DM จากสมาชิกในเซิร์ฟเวอร์</li>
+                        <li>ทางที่ดีให้ผู้สมัครกรอก <b>User ID</b> (ตัวเลข 17-20 หลัก) ตอนสมัคร — บอทจะส่งได้แม่นที่สุด</li>
+                    </ol>
+                </details>
+            </div>
+
             <!-- Member Form -->
             <div class="panel">
 
@@ -212,6 +314,92 @@
                         >
                     </label>
 
+                    <label>
+                        อายุ IC
+
+                        <input
+                            name="icAge"
+                            maxlength="10"
+                            placeholder="เช่น 21"
+                        >
+                    </label>
+
+                    <label>
+                        ลิงก์เฟส IC (URL)
+
+                        <input
+                            name="facebookIc"
+                            type="url"
+                            placeholder="https://facebook.com/..."
+                        >
+                    </label>
+
+                    <label>
+                        ดิสคอร์ด (ชื่อผู้ใช้ / User ID สำหรับส่ง DM)
+
+                        <input
+                            name="discordUser"
+                            maxlength="60"
+                            placeholder="username หรือตัวเลข 17-20 หลัก"
+                        >
+                    </label>
+
+                    <label>
+                        ลิงก์ Google Drive
+
+                        <input
+                            name="driveLink"
+                            type="url"
+                            placeholder="https://drive.google.com/..."
+                        >
+                    </label>
+
+                    <label>
+                        แท็กไลน์ (บรรทัดใต้ชื่อ)
+
+                        <input
+                            name="tagline"
+                            maxlength="60"
+                            placeholder="เช่น LOYALTY ABOVE ALL"
+                        >
+                    </label>
+
+                    <label>
+                        สถานะบนบอร์ด
+
+                        <input
+                            name="status"
+                            maxlength="40"
+                            placeholder="เช่น ONLINE, ACTIVE"
+                        >
+                    </label>
+
+                    <label>
+                        ธีมสีบอร์ด
+
+                        <select name="theme">
+                            <option value="">STANDARD</option>
+                            <option value="gold">GOLD</option>
+                            <option value="silver">SILVER</option>
+                            <option value="ice">ICE</option>
+                            <option value="rose">ROSE</option>
+                            <option value="mint">MINT</option>
+                            <option value="violet">VIOLET</option>
+                        </select>
+                    </label>
+
+                    <label>
+                        ลวดลายบอร์ด
+
+                        <select name="pattern">
+                            <option value="">PLAIN</option>
+                            <option value="plain">PLAIN</option>
+                            <option value="grid">GRID</option>
+                            <option value="dots">DOTS</option>
+                            <option value="glow">GLOW</option>
+                        </select>
+                    </label>
+
                     <label class="full">
                         คำอธิบายสั้น ๆ
 
@@ -259,12 +447,19 @@
                         รายชื่อทั้งหมด
                     </h2>
 
-                    <span
-                        id="total"
-                        class="muted"
-                    ></span>
+                    <div class="list-meta">
+                        <span id="order-msg" class="message order-msg"></span>
+                        <span
+                            id="total"
+                            class="muted"
+                        ></span>
+                    </div>
 
                 </div>
+
+                <p class="muted order-hint">
+                    ลากแถวเพื่อจัดลำดับ หรือกดปุ่ม ↑ ↓ — ลำดับใหม่จะแสดงบนหน้าเว็บทันที
+                </p>
 
                 <div id="admin-tabs" class="admin-tabs">
                     <button type="button" class="tab active" data-tier="ALL">ALL</button>
@@ -272,6 +467,7 @@
                     <button type="button" class="tab" data-tier="LEADER">LEADER</button>
                     <button type="button" class="tab" data-tier="SUPPORT">SUPPORT</button>
                     <button type="button" class="tab" data-tier="MEMBER">MEMBER</button>
+                    <button type="button" class="tab" data-tier="EXIT">ออกจากแก๊ง</button>
                 </div>
 
                 <div
@@ -282,6 +478,23 @@
             </div>
         </section>
     </main>
+
+    <!-- Credentials / DM modal -->
+    <div class="cred-overlay" id="cred-overlay" hidden>
+        <div class="cred-modal" role="dialog" aria-modal="true" aria-labelledby="cred-title">
+            <button class="cred-close" id="cred-close" aria-label="ปิด">×</button>
+            <p class="eyebrow">CREDENTIALS / DM</p>
+            <h2 id="cred-title">ส่งรหัสให้สมาชิก</h2>
+            <p class="muted" id="cred-status"></p>
+            <ul class="status-list" id="cred-info"></ul>
+            <label class="cred-label">ข้อความที่จะส่งไปใน DM</label>
+            <pre id="cred-message" class="cred-message"></pre>
+            <div class="btn-row">
+                <button class="silver-btn" id="cred-copy" type="button">คัดลอกข้อความ DM</button>
+                <button class="ghost" id="cred-done" type="button">ปิด</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Admin JavaScript -->
     <script src="/admin.js"></script>

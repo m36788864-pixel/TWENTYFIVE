@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#030303">
+  <meta name="description" content="สมัครเข้าแก๊ง TWENTYFIVE — ส่งใบสมัครให้แอดมินคัดเลือก">
+  <title>TWENTYFIVE | สมัครเข้าแก๊ง</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&family=Orbitron:wght@400;600;700;800&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/portal.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-inner">
+      <a class="brand" href="/">
+        <span class="brand-mark">25</span>
+        <span>TWENTYFIVE<small>JOIN THE GANG</small></span>
+      </a>
+      <nav class="top-links">
+        <a href="/">หน้าแรก</a>
+        <a href="/apply" class="is-active">สมัครเข้าแก๊ง</a>
+        <a href="/board">บอร์ดของฉัน</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="hero-head">
+      <p class="eyebrow">RECRUITMENT <span>//</span> TWENTYFIVE</p>
+      <h1>สมัครเข้า<em>แก๊ง</em></h1>
+      <p class="muted">กรอกข้อมูลให้ครบแล้วส่งใบสมัคร — แอดมินจะคัดเลือกเอง ถ้าได้รับการอนุมัติ ระบบจะออกชื่อผู้ใช้และรหัสผ่านให้คุณทาง <b>ข้อความส่วนตัว (DM)</b> ตามดิสคอร์ดที่แจ้งไว้ แล้วคุณจะได้บอร์ดแนะนำตัวเป็นของตัวเองไว้ตกแต่งได้อิสระ</p>
+      <div class="notice-box">
+        <b>ระหว่างรอผลยังเข้ากลุ่มดิสคอร์ดของแก๊งไม่ได้</b>
+        <span>แต่ไม่ต้องกังวล — พอส่งใบสมัครแล้วระบบจะส่งข้อความตอบกลับไปให้ทาง DM แล้วรอข้อความยืนยันจากแอดมินอีกครั้ง ถ้าใบสมัครผ่าน จะได้ชื่อผู้ใช้ รหัสผ่าน และลิงก์เข้ากลุ่มดิสคอร์ดในข้อความนั้น</span>
+      </div>
+    </div>
+
+    <!-- FORM -->
+    <section class="panel" id="form-panel">
+      <h2>ใบสมัครเข้าแก๊ง</h2>
+      <p class="muted panel-sub">ช่องที่มี <b style="color:var(--acc)">*</b> จำเป็นต้องกรอก</p>
+
+      <form id="apply-form" novalidate>
+        <div class="grid-2">
+          <label class="field">
+            <span>ชื่อ IC <b>*</b></span>
+            <input name="name" maxlength="80" required placeholder="ชื่อที่ใช้ในแก๊ง">
+          </label>
+
+          <label class="field">
+            <span>อายุ IC <b>*</b></span>
+            <input name="icAge" maxlength="10" required placeholder="เช่น 21">
+          </label>
+
+          <label class="field">
+            <span>เฟส IC (ลิงก์) <small class="opt">ไม่บังคับ</small></span>
+            <input name="facebookIc" type="url" placeholder="https://facebook.com/... (เว้นว่างได้)">
+          </label>
+
+          <label class="field">
+            <span>ดิสคอร์ด <b>*</b></span>
+            <input name="discordUser" maxlength="60" required placeholder="ชื่อผู้ใช้ หรือ User ID (ตัวเลข 17-20 หลัก)">
+            <small class="muted">ถ้าใส่เป็น User ID ระบบจะส่งชื่อกับรหัสให้ทาง DM อัตโนมัติ</small>
+          </label>
+
+          <label class="field full">
+            <span>ลิงก์ Google Drive (ให้แอดมินดู)</span>
+            <input name="driveLink" type="url" placeholder="https://drive.google.com/...">
+          </label>
+
+          <label class="field full">
+            <span>รายละเอียดแนะนำตัว <b>*</b></span>
+            <textarea name="about" maxlength="400" required placeholder="แนะนำตัวสั้น ๆ ว่าคุณเป็นใคร ทำอะไรได้บ้าง"></textarea>
+          </label>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn primary" type="submit" id="apply-submit">ส่งใบสมัคร ↗</button>
+          <span id="apply-msg" class="message"></span>
+        </div>
+      </form>
+    </section>
+
+    <!-- SUCCESS -->
+    <section class="panel" id="done-panel" hidden>
+      <h2>ส่งใบสมัครเรียบร้อย ✓</h2>
+      <p class="muted panel-sub">แอดมินจะตรวจใบสมัครและคัดเลือกเอง ถ้าผ่าน ระบบจะส่ง <b>ชื่อผู้ใช้ + รหัสผ่าน</b> ไปให้ทาง DM ดิสคอร์ดตามที่แจ้งไว้</p>
+      <ul class="status-list">
+        <li><b>ชื่อ IC</b><span id="done-name">—</span></li>
+        <li><b>ดิสคอร์ด</b><span id="done-discord">—</span></li>
+        <li><b>สถานะ</b><span><span class="badge pending"><i></i>รอแอดมินตรวจ</span></span></li>
+      </ul>
+      <div class="btn-row">
+        <a class="btn" href="/board">ไปที่บอร์ดของฉัน</a>
+        <button class="btn ghost" type="button" id="again">สมัครอีกรายการ</button>
+      </div>
+      <div class="notice-box" id="done-dm-note">
+        <b>รอข้อความตอบกลับจากแอดมิน</b>
+        <span id="done-dm-text">ถ้าใบสมัครผ่าน ระบบจะส่งข้อความมาหาคุณอีกครั้ง พร้อมชื่อผู้ใช้ รหัสผ่าน และลิงก์เข้ากลุ่มดิสคอร์ดของแก๊ง — ระหว่างนี้ยังเข้ากลุ่มดิสคอร์ดไม่ได้นะ</span>
+      </div>
+    </section>
+
+    <!-- STATUS CHECK -->
+    <section class="panel">
+      <h2>ตรวจสอบสถานะใบสมัคร</h2>
+      <p class="muted panel-sub">กรอกชื่อ IC หรือดิสคอร์ดที่ใช้สมัคร เพื่อดูว่าแอดมินอนุมัติแล้วหรือยัง</p>
+      <form id="status-form" class="two-col">
+        <label class="field" style="margin:0">
+          <span>ชื่อ IC / ดิสคอร์ด</span>
+          <input name="name" maxlength="80" placeholder="ชื่อที่ใช้สมัคร" required>
+        </label>
+        <div class="btn-row" style="align-items:flex-end">
+          <button class="btn" type="submit">ตรวจสอบ</button>
+        </div>
+      </form>
+      <p id="status-msg" class="message" style="margin-top:14px"></p>
+      <div id="status-result" hidden></div>
+    </section>
+  </main>
+
+  <script src="/apply.js"></script>
+</body>
+</html>
