@@ -87,8 +87,8 @@
   /* ลิงก์ที่ฝังเล่นไม่ได้ → แค่ปุ่มเปิดลิงก์ */
   let player = null;
   if (!parsed || !parsed.embed) {
-    mount.innerHTML = `<b style="display:block;color:#f0f0f4;font-size:12.5px">${T25Song.esc(song.title || "เพลงเปิดเว็บ")}</b>
-      <a class="t25-music-link" href="${T25Song.esc(song.url)}" target="_blank" rel="noopener">♪ เปิดเพลง ↗</a>`;
+    const label = song.hideTitle ? "" : `<b style="display:block;color:#f0f0f4;font-size:12.5px">${T25Song.esc(song.title || "เพลงเปิดเว็บ")}</b>`;
+    mount.innerHTML = `${label}<a class="t25-music-link" href="${T25Song.esc(song.url)}" target="_blank" rel="noopener">♪ เปิดเพลง ↗</a>`;
     wrap.querySelector(".t25-music-head").hidden = false;
     btn.addEventListener("click", () => window.open(song.url, "_blank", "noopener"));
     return;

@@ -217,6 +217,7 @@
                         <p class="muted" style="margin:6px 0 0">
                             เพลงที่จะเล่นอัตโนมัติตอนผู้ชมเปิดเว็บ (ตัวเล่นลอยที่มุมล่างขวาของทุกหน้า)
                             — วางลิงก์ YouTube / YouTube Music / Spotify / SoundCloud / Apple Music ระบบจะฝังตัวเล่นให้เอง
+                            หรือจะอัปโหลดไฟล์เสียง (mp3) จากเครื่องแทนก็ได้
                         </p>
                     </div>
                     <span id="site-song-badge" class="badge"><i></i>MUSIC</span>
@@ -249,9 +250,25 @@
 
                         <input
                             name="url"
-                            type="url"
+                            type="text"
                             placeholder="https://youtu.be/... หรือ https://open.spotify.com/track/..."
                         >
+                    </label>
+
+                    <label class="full">
+                        หรืออัปโหลดไฟล์เสียงจากเครื่องแทนลิงก์ (mp3 / m4a / wav / ogg — สูงสุด 25 MB)
+
+                        <input
+                            name="file"
+                            id="site-song-file"
+                            type="file"
+                            accept="audio/*,.mp3,.m4a,.wav,.ogg,.opus,.webm,.flac"
+                        >
+                    </label>
+
+                    <label class="full" style="display:flex;align-items:center;gap:9px;font-size:13px;color:#cfcfd6">
+                        <input name="hideTitle" id="site-song-hide-title" type="checkbox" style="width:auto;height:auto">
+                        ซ่อนชื่อเพลง — ผู้ชมจะเห็นแค่ตัวเล่น ไม่เห็นชื่อเพลง
                     </label>
 
                     <div class="form-actions full">

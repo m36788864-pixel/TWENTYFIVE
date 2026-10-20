@@ -132,6 +132,9 @@ function renderSiteSong(song) {
   siteSongForm.elements.title.value = hasSong ? (song.title || "") : "";
   siteSongForm.elements.artist.value = hasSong ? (song.artist || "") : "";
   siteSongForm.elements.url.value = hasSong ? (song.url || "") : "";
+  if (siteSongForm.elements.hideTitle) siteSongForm.elements.hideTitle.checked = hasSong ? !!song.hideTitle : false;
+  const fileInput = $("#site-song-file");
+  if (fileInput) fileInput.value = "";
   $("#site-song-clear").hidden = !hasSong;
 
   const badge = $("#site-song-badge");
@@ -155,8 +158,32 @@ async function loadSiteSong() {
 siteSongForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const fd = new FormData(siteSongForm);
-  const body = Object.fromEntries(fd.entries());
-  if (!String(body.url || "").trim()) { siteSongMsg.textContent = "กรุณาใส่ลิงก์เพลงก่อน"; return; }
+  const fileInput = $("#site-song-file");
+  const file = fileInput && fileInput.files && fileInput.files[0];
+  const body = {
+    title: String(fd.get("title") || ""),
+    artist: String(fd.get("artist") || ""),
+    url: String(fd.get("url") || ""),
+    hideTitle: fd.get("hideTitle") === "on"
+  };
+
+  /* เลือกไฟล์เสียง → อัปโหลดขึ้นเซิร์ฟเวอร์ก่อน แล้วใช้ URL ไฟล์นั้น */
+  if (file) {
+    if (file.size > 25 * 1024 * 1024) { siteSongMsg.textContent = "ไฟล์ใหญ่เกิน 25 MB"; return; }
+    siteSongMsg.textContent = "กำลังอัปโหลดไฟล์เพลง...";
+    siteSongMsg.className = "message";
+    try {
+      const up = await api(`/api/site-song/upload?filename=${encodeURIComponent(file.name)}`, {
+        method: "POST",
+        headers: { "Content-Type": file.type || "application/octet-stream" },
+        body: file
+      });
+      body.url = up.url;
+      body.hideTitle = true;   /*ไฟล์ที่อัปโหลด → ซ่อนชื่อไว้ก่อน (ติ๊กออกได้ถ้าอยากให้โชว์ชื่อ) */
+    } catch (err) { siteSongMsg.textContent = "อัปโหลดไม่สำเร็จ: " + err.message; return; }
+  }
+
+  if (!String(body.url || "").trim()) { siteSongMsg.textContent = "กรุณาใส่ลิงก์เพลง หรือเลือกไฟล์เสียงก่อน"; return; }
   siteSongMsg.textContent = "กำลังบันทึก...";
   siteSongMsg.className = "message";
   try {

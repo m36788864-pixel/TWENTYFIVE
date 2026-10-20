@@ -22,7 +22,9 @@ window.T25Song = (function () {
 .t25-player.k-spotify .t25-song-frame{height:152px}
 .t25-player.k-soundcloud .t25-song-frame{height:166px}
 .t25-player.k-apple .t25-song-frame{height:175px}
+.t25-player.k-audio .t25-song-frame{height:48px;background:rgba(0,0,0,.35)}
 .t25-song-frame iframe,.t25-song-frame>div{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+.t25-song-frame audio{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
 .t25-song-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;font-size:12.5px;color:#b9b9c2}
 .t25-song-meta b{color:#f0f0f4;font-weight:600;overflow-wrap:anywhere}
 .t25-song-meta em{font-style:normal;color:#8b8b95;overflow-wrap:anywhere}
@@ -58,6 +60,12 @@ window.T25Song = (function () {
   /* ---------- แปลงลิงก์เป็น URL ฝังเล่น ---------- */
   function parse(rawUrl) {
     const url = String(rawUrl || "").trim();
+    if (!url) return null;
+
+    /* ไฟล์เสียงตรง ๆ (เช่น /uploads/site-song.mp3 ที่อัปโหลดไว้ หรือลิงก์ .mp3 ทั่วไป) */
+    if (/^\/[\w./-]+$/.test(url) || /^https?:\/\//i.test(url)) {
+      if (/\.(mp3|m4a|aac|wav|ogg|opus|webm|flac)([?#].*)?$/i.test(url)) return { kind: "audio", embed: url };
+    }
     if (!/^https?:\/\//i.test(url)) return null;
 
     /* YouTube / YouTube Music / youtu.be / Shorts */
@@ -124,13 +132,16 @@ window.T25Song = (function () {
     container.hidden = false;
 
     const parsed = parse(info.url) || { kind: "link", embed: null };
-    ["youtube", "spotify", "soundcloud", "apple", "link"].forEach((k) => container.classList.remove("k-" + k));
+    ["youtube", "spotify", "soundcloud", "apple", "audio", "link"].forEach((k) => container.classList.remove("k-" + k));
     container.classList.add("k-" + parsed.kind);
 
-    const meta = document.createElement("div");
-    meta.className = "t25-song-meta";
-    meta.innerHTML = `<span class="t25-song-note" aria-hidden="true">♪</span><b>${esc(info.title || "เพลงประจำบอร์ด")}</b><em>${esc(info.artist)}</em>`;
-    container.appendChild(meta);
+    /* ซ่อนชื่อเพลง (hideTitle) → แสดงเฉพาะตัวเล่น ไม่โชว์ชื่อ/ศิลปิน */
+    if (!song || !song.hideTitle) {
+      const meta = document.createElement("div");
+      meta.className = "t25-song-meta";
+      meta.innerHTML = `<span class="t25-song-note" aria-hidden="true">♪</span><b>${esc(info.title || "เพลงประจำบอร์ด")}</b><em>${esc(info.artist)}</em>`;
+      container.appendChild(meta);
+    }
 
     /* ลิงก์ที่ฝังไม่ได้ → ปุ่มเปิดลิงก์ */
     if (!parsed.embed) {
@@ -149,7 +160,7 @@ window.T25Song = (function () {
     frame.className = "t25-song-frame";
     container.appendChild(frame);
 
-    const state = { playing: false, destroyed: false, yt: null, ytReady: null, pendingPlay: false, iframe: null };
+    const state = { playing: false, destroyed: false, yt: null, ytReady: null, pendingPlay: false, iframe: null, audio: null };
 
     const btn = document.createElement("button");
     btn.type = "button";
@@ -199,6 +210,7 @@ window.T25Song = (function () {
       if (state.destroyed) return;
       state.playing = true;
       paint();
+      if (parsed.kind === "audio") { if (state.audio) { const p = state.audio.play(); if (p && p.catch) p.catch(() => {}); } return; }
       if (parsed.kind === "youtube") {
         if (state.ytReady) { try { state.ytReady.playVideo(); } catch {} }
         else state.pendingPlay = true;
@@ -213,6 +225,7 @@ window.T25Song = (function () {
       if (state.destroyed) return;
       state.playing = false;
       paint();
+      if (parsed.kind === "audio") { if (state.audio) state.audio.pause(); return; }
       if (parsed.kind === "youtube") { if (state.ytReady) { try { state.ytReady.pauseVideo(); } catch {} } return; }
       if (parsed.kind === "spotify") { post({ command: "pause" }, "https://open.spotify.com"); return; }
       if (parsed.kind === "soundcloud") { post({ method: "pause" }, "https://w.soundcloud.com"); return; }
@@ -225,7 +238,7 @@ window.T25Song = (function () {
       state.destroyed = true;
       try { if (state.yt && state.yt.destroy) state.yt.destroy(); } catch {}
       container.innerHTML = "";
-      container.classList.remove("t25-player", "k-youtube", "k-spotify", "k-soundcloud", "k-apple", "k-link", "is-playing");
+      container.classList.remove("t25-player", "k-youtube", "k-spotify", "k-soundcloud", "k-apple", "k-audio", "k-link", "is-playing");
       container.hidden = true;
       container.__t25Song = null;
     }
@@ -241,7 +254,19 @@ window.T25Song = (function () {
     btn.addEventListener("click", () => controller.toggle());
     paint();
 
-    if (parsed.kind === "youtube") {
+    if (parsed.kind === "audio") {
+      /* ไฟล์เสียงบนเซิร์ฟเวอร์ → เล่นตรงด้วย <audio> */
+      const audio = document.createElement("audio");
+      audio.src = parsed.embed;
+      audio.controls = true;
+      audio.preload = "metadata";
+      audio.setAttribute("playsinline", "");
+      audio.addEventListener("play", () => { state.playing = true; paint(); });
+      audio.addEventListener("pause", () => { state.playing = false; paint(); });
+      frame.appendChild(audio);
+      state.audio = audio;
+      if (opts.autoplay) { const p = audio.play(); if (p && p.catch) p.catch(() => {}); }
+    } else if (parsed.kind === "youtube") {
       const holder = document.createElement("div");
       frame.appendChild(holder);
       loadYT().then((YT) => {

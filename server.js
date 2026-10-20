@@ -1383,23 +1383,55 @@ app.put("/api/board/me", (req, res) => {
    9.5 SITE SONG (เพลงเปิดเว็บ — แอดมินตั้งในหลังบ้าน แล้วระบบเปิดตอนเข้าเว็บ)
    ============================================================ */
 const SITE_SONG_ID = "siteSong";
+const SONG_AUDIO_EXT = ["mp3", "m4a", "aac", "wav", "ogg", "opus", "webm", "flac"];
 const getSiteSong = () => {
   const row = readSettings().find((s) => s && s.id === SITE_SONG_ID);
   if (!row || !row.url) return null;
-  return { title: cleanLine(row.title, 80), artist: cleanLine(row.artist, 80), url: String(row.url) };
+  return { title: cleanLine(row.title, 80), artist: cleanLine(row.artist, 80), url: String(row.url), hideTitle: !!row.hideTitle };
+};
+/* เก็บเพลงไฟล์เดียวเสมอ — อัปโหลดใหม่แทนที่ไฟล์เก่า */
+const clearUploadedSong = () => {
+  try {
+    for (const f of fs.readdirSync(UPLOAD_DIR)) {
+      if (/^site-song\.[a-z0-9]+$/i.test(f)) { try { fs.unlinkSync(path.join(UPLOAD_DIR, f)); } catch {} }
+    }
+  } catch {}
 };
 
 app.get("/api/site-song", (req, res) => res.json(getSiteSong()));
 
+/* อัปโหลดไฟล์เสียงจากเครื่องแอดมินมาเป็นเพลงเปิดเว็บ (ไม่ต้องพึ่งลิงก์) */
+app.post("/api/site-song/upload", adminOnly, express.raw({ type: () => true, limit: "25mb" }), (req, res) => {
+  const filename = cleanLine((req.query || {}).filename, 120);
+  const ext = (filename.match(/\.([A-Za-z0-9]{2,5})$/) || [])[1] || "";
+  if (!SONG_AUDIO_EXT.includes(ext.toLowerCase())) {
+    return res.status(400).json({ error: "ไฟล์ต้องเป็นเสียง mp3 / m4a / wav / ogg / opus / webm / flac" });
+  }
+  const buf = Buffer.isBuffer(req.body) ? req.body : null;
+  if (!buf || !buf.length) return res.status(400).json({ error: "ไม่ได้รับไฟล์เพลง" });
+  try { fs.mkdirSync(UPLOAD_DIR, { recursive: true }); } catch {}
+  clearUploadedSong();
+  const name = `site-song.${ext.toLowerCase()}`;
+  try { fs.writeFileSync(path.join(UPLOAD_DIR, name), buf); }
+  catch { return res.status(500).json({ error: "บันทึกไฟล์เพลงไม่สำเร็จ" }); }
+  res.json({ url: `/uploads/${name}`, bytes: buf.length });
+});
+
 app.put("/api/site-song", adminOnly, (req, res) => {
   const body = req.body || {};
-  const url = cleanUrl(body.url);
-  if (!url) return res.status(400).json({ error: "ลิงก์เพลงต้องขึ้นต้นด้วย http:// หรือ https://" });
+  let url = cleanUrl(body.url);
+  /* อนุญาต url เป็นไฟล์ที่อัปโหลดไว้ (ชี้ไปที่ /uploads/site-song.xxx ที่เพิ่งอัป) */
+  if (!url && /^\/uploads\/site-song\.[a-z0-9]+$/i.test(String(body.url || "").trim())) {
+    const name = String(body.url).trim().split("/").pop();
+    if (fs.existsSync(path.join(UPLOAD_DIR, name))) url = `/uploads/${name}`;
+  }
+  if (!url) return res.status(400).json({ error: "ลิงก์เพลงต้องขึ้นต้นด้วย http:// หรือ https:// หรือเป็นไฟล์ที่อัปโหลดไว้" });
   const entry = {
     id: SITE_SONG_ID,
     title: cleanLine(body.title, 80),
     artist: cleanLine(body.artist, 80),
     url,
+    hideTitle: !!body.hideTitle,
     updatedAt: new Date().toISOString()
   };
   const list = readSettings().filter((s) => !s || s.id !== SITE_SONG_ID);
@@ -1412,6 +1444,7 @@ app.delete("/api/site-song", adminOnly, (req, res) => {
   const list = readSettings();
   const next = list.filter((s) => s && s.id !== SITE_SONG_ID);
   if (next.length !== list.length) settingsStore.write(next);
+  clearUploadedSong();
   res.json(null);
 });
 
