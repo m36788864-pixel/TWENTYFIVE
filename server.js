@@ -1396,18 +1396,23 @@ app.post("/api/sheets/restore", adminOnly, async (req, res) => {
   try {
     const items = await fetchSheetRaw();
     if (!Object.keys(items).length) {
-      const why = sheetStatus.lastError
-        ? ` สาเหตุที่ยังไม่มีสำเนา: ${sheetStatus.lastError}`
-        : "";
+      /* ยังไม่มีข้อมูลในชีต — ต้องบอกให้ชัดว่า "ส่งขึ้นชีต" กับ "อ่านจากชีต" อันไหนที่มีปัญหา
+         เพราะถ้าส่งสำเร็จแต่กู้ไม่ได้ แปลว่าโค้ด Apps Script ที่วางเป็นเวอร์ชันเก่า */
+      const syncState = sheetStatus.lastSyncAt
+        ? `สถานะส่งขึ้นชีต: เคยสำเร็จครั้งล่าสุด ${sheetStatus.lastSyncAt}${sheetStatus.lastError ? ` แต่ล่าสุดผิดพลาด: ${sheetStatus.lastError}` : " และไม่มีข้อผิดพลาดค้าง"}`
+        : `สถานะส่งขึ้นชีต: ยังไม่เคยสำเร็จเลย${sheetStatus.lastError ? ` — ${sheetStatus.lastError}` : ""}`;
+      const diagnosis = sheetStatus.lastSyncAt
+        ? `ส่งขึ้นชีตสำเร็จแล้วแต่กู้ไม่ได้ → โค้ด Apps Script บนชีตน่าจะเป็นเวอร์ชันเก่าที่ยังไม่รองรับชีตลับ _raw ให้เปิดไฟล์ Apps Script แล้ววางเนื้อหาใหม่ทั้งหมดจากไฟล์ google-sheets/apps-script.gs จากนั้น Deploy → Manage deployments → ไอคอนดินสอ → New version`
+        : `ยังไม่เคยส่งขึ้นชีตสำเร็จ → ให้กดปุ่ม "ส่งข้อมูลขึ้นชีตเดี๋ยวนี้" ก่อน แล้วดูว่าขึ้นสำเร็จหรือข้อความผิดพลาดอะไร`;
       const memberCount = readMembers().length;
       const appCount = readApps().length;
       if (memberCount || appCount) {
         return res.status(404).json({
-          error: `ยังไม่มีสำเนาบน Google ชีตให้ดึงกลับ — แต่บนเว็บตอนนี้มีข้อมูลอยู่แล้ว ${memberCount} สมาชิก / ${appCount} ใบสมัคร ถ้าจะเก็บข้อมูลชุดนี้ลงชีต ให้กด "ส่งข้อมูลขึ้นชีตเดี๋ยวนี้" 1 ครั้ง (ระบบก็ส่งให้เองอัตโนมัติทุก ${sheetStatus.keepaliveSec} วินาทีอยู่แล้ว)${why}`
+          error: `ยังไม่มีสำเนาบน Google ชีตให้ดึงกลับ — ระบบติดต่อ Apps Script ได้แล้ว แต่ยังไม่พบข้อมูลในชีต (ชีตลับ _raw ว่างเปล่า) · ${syncState} · บนเว็บตอนนี้มีข้อมูลอยู่ ${memberCount} สมาชิก / ${appCount} ใบสมัคร · วิธีแก้: ${diagnosis}`
         });
       }
       return res.status(404).json({
-        error: `ยังไม่มีสำเนาบน Google ชีตให้ดึงกลับ — ระบบยังส่งข้อมูลขึ้นชีตไม่สำเร็จเลยครั้งเดียว ให้ตรวจว่า SHEETS_WEBHOOK_URL ถูกต้อง, Apps Script Deploy เป็น "Anyone" และ TOKEN ในโค้ด Apps Script ตรงกับ SHEETS_SECRET${why}`
+        error: `ยังไม่มีสำเนาบน Google ชีตให้ดึงกลับ — ระบบติดต่อ Apps Script ได้แล้ว แต่ยังไม่พบข้อมูลในชีต (ชีตลับ _raw ว่างเปล่า) · ${syncState} · วิธีแก้: ตรวจว่า SHEETS_WEBHOOK_URL ถูกต้อง, Deploy เป็น "Anyone", TOKEN ในโค้ด Apps Script ตรงกับ SHEETS_SECRET แล้วกด "ส่งข้อมูลขึ้นชีตเดี๋ยวนี้"`
       });
     }
     const report = await applySheetRestore(items, { onlyMissing: false });
