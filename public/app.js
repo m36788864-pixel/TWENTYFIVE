@@ -168,11 +168,12 @@ function cardHTML(m, tier, i) {
   const idText = "ID-" + String(m.id).slice(-4).padStart(4, "0");
   const num = String(i + 1).padStart(2, "0");
   const theme = boardTheme(m);
+  const songChip = safeURL(m.songUrl) ? '<span class="op-song-chip" title="มีเพลงประจำบอร์ด">♪</span>' : "";
   const classes = ["op-card", `tier-${tier.toLowerCase()}`, theme ? `board-${theme}` : ""].filter(Boolean).join(" ");
   return `
     <article class="${classes}" data-member-id="${escapeHTML(m.id)}" tabindex="0" role="button" aria-label="ดูโปรไฟล์ ${escapeHTML(m.name)}" style="animation-delay:${Math.min(i * 45, 420)}ms">
       <span class="op-ghost" aria-hidden="true">${num}</span>
-      <div class="op-top"><span class="op-chip"><i></i>${t.label}</span></div>
+      <div class="op-top"><span class="op-chip"><i></i>${t.label}</span>${songChip}</div>
       <div class="op-avatar">
         ${m.image ? `<img src="${escapeHTML(m.image)}" alt="" loading="lazy" onerror="this.remove()">` : `<b>25</b>`}
         <i class="op-dot"></i>
@@ -245,6 +246,58 @@ document.getElementById("filters").addEventListener("click", (e) => {
 
 
 /* ---------- 8. MEMBER PROFILE MODAL ---------- */
+const profileModalEl = document.querySelector(".profile-modal");
+
+/* ลูกเล่น: ให้ตัวอักษรชื่อ "ถอดรหัส" ทีละตัวอักษร */
+function scrambleText(el, finalText) {
+  const target = String(finalText == null ? "" : finalText);
+  const glyphs = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&*<>/\\";
+  const total = Math.min(26, Math.max(12, target.length));
+  let frame = 0;
+  clearInterval(el._scramble);
+  el._scramble = setInterval(() => {
+    frame += 1;
+    const progress = frame / total;
+    let out = "";
+    for (let i = 0; i < target.length; i += 1) {
+      if (target[i] === " " || i < target.length * progress) out += target[i];
+      else out += glyphs[(Math.random() * glyphs.length) | 0];
+    }
+    el.textContent = out;
+    if (frame >= total) {
+      clearInterval(el._scramble);
+      el.textContent = target;
+    }
+  }, 40);
+}
+
+/* ลูกเล่น: ประกายระยิบระยับในพื้นหลังป๊อปอัพ (สร้างครั้งเดียว) */
+function spawnSparks() {
+  const box = document.getElementById("profile-sparks");
+  if (!box || box.childElementCount) return;
+  let html = "";
+  for (let i = 0; i < 14; i += 1) {
+    html += `<i style="left:${(Math.random() * 94 + 3).toFixed(1)}%;top:${(Math.random() * 92 + 4).toFixed(1)}%;animation-duration:${(2 + Math.random() * 3).toFixed(1)}s;animation-delay:${(Math.random() * 3).toFixed(1)}s"></i>`;
+  }
+  box.innerHTML = html;
+}
+
+/* ลูกเล่น: โน้มโมดัลตามเมาส์ + แสงไล่ตามจุดชี้ (เฉพาะจอใหญ่/เมาส์เท่านั้น) */
+const canTilt = window.matchMedia("(hover:hover) and (pointer:fine) and (min-width:700px)");
+profileOverlay.addEventListener("pointermove", (event) => {
+  if (!profileOverlay.classList.contains("open")) return;
+  const box = profileModalEl.getBoundingClientRect();
+  const px = (event.clientX - box.left) / box.width;
+  const py = (event.clientY - box.top) / box.height;
+  profileModalEl.style.setProperty("--mx", `${(px * 100).toFixed(1)}%`);
+  profileModalEl.style.setProperty("--my", `${(py * 100).toFixed(1)}%`);
+  if (!canTilt.matches) return;
+  const rx = ((0.5 - py) * -5).toFixed(2);
+  const ry = ((px - 0.5) * 6).toFixed(2);
+  profileModalEl.style.transform = `perspective(1000px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+});
+profileOverlay.addEventListener("pointerleave", () => { profileModalEl.style.transform = ""; });
+
 function openProfile(member) {
   if (!member) return;
   const modal = document.querySelector(".profile-modal");
@@ -257,7 +310,9 @@ function openProfile(member) {
     ? `<img src="${escapeHTML(member.image)}" alt="${escapeHTML(member.name)}" onerror="this.remove()"><span class="profile-avatar-fallback">25</span>`
     : '<span>25</span>';
   avatar.classList.toggle("has-image", !!member.image);
-  document.getElementById("profile-name").textContent = member.name || "MEMBER";
+  const nameEl = document.getElementById("profile-name");
+  nameEl.textContent = member.name || "MEMBER";
+  scrambleText(nameEl, member.name || "MEMBER");
   document.getElementById("profile-role").textContent = member.role || "MEMBER";
   document.getElementById("profile-group").textContent = member.group || "MEMBERS";
 
@@ -282,6 +337,15 @@ function openProfile(member) {
   if (drive) actions.push(`<a class="profile-link" href="${escapeHTML(drive)}" target="_blank" rel="noopener">DRIVE ↗</a>`);
   if (!actions.length) actions.push('<span class="profile-no-links">NO PUBLIC LINKS PROVIDED</span>');
   document.getElementById("profile-actions").innerHTML = actions.join("");
+
+  /* เพลงประจำบอร์ดของสมาชิกคนนี้ (ถ้ามี) */
+  const songBox = document.getElementById("profile-song");
+  if (window.T25Song) T25Song.render(songBox, { title: member.songTitle, artist: member.songArtist, url: member.songUrl });
+
+  /* รีเซ็ตมุมมอง/เอฟเฟกต์ แล้วค่อยเปิด */
+  modal.scrollTop = 0;
+  modal.style.transform = "";
+  spawnSparks();
   profileOverlay.classList.add("open");
   profileOverlay.setAttribute("aria-hidden", "false");
   document.body.classList.add("profile-open");
@@ -292,6 +356,9 @@ function closeProfile() {
   profileOverlay.classList.remove("open");
   profileOverlay.setAttribute("aria-hidden", "true");
   document.body.classList.remove("profile-open");
+  profileModalEl.style.transform = "";
+  /* ปิดหน้าต่าง = หยุดเสียงเพลงของสมาชิกคนนั้นทันที */
+  if (window.T25Song) T25Song.destroyIn(document.getElementById("profile-song"));
 }
 
 grid.addEventListener("click", (event) => {

@@ -283,7 +283,7 @@ async function restoreFromCloud() {
       backupStatus.lastRestoreError = "ตั้งค่า BACKUP ไม่ครบ — ต้องมี BACKUP_KEY + BACKUP_GITHUB_TOKEN + BACKUP_REPO ครบทั้งสามตัว";
       console.warn(`[backup] ${backupStatus.lastRestoreError}`);
     }
-    for (const store of [membersStore, appsStore]) {
+    for (const store of [membersStore, appsStore, settingsStore]) {
       const name = store.name;
       try {
         if (fs.existsSync(store.file) || fs.existsSync(store.seedFile)) {
@@ -365,7 +365,8 @@ function cloudSummary() {
 /* ------------------------------------------------------------
    GOOGLE SHEETS SYNC — ส่งใบสมัคร + รายชื่อสมาชิกขึ้น Google ชีต
    ปลายทางคือ Apps Script Web App (ไม่ต้องใช้ไลบรารีเพิ่ม)
-   ส่งแบบ "เขียนทับทั้งชีต" ทุกครั้ง → แก้/ลบ/เรียงลำดับ ตรงกันเสมอ
+   ส่งแบบ "อัปเดตต่อ" (upsert ตามรหัส) → แถวเดิมแก้ในที่เดิม แถวใหม่ต่อท้าย ไม่ล้างชีตแล้วลงใหม่
+   รายการที่ลบบนเว็บ จะส่งรหัสไปลบแถวนั้นบนชีตให้ด้วย
    ------------------------------------------------------------ */
 const SHEET_NAMES = { applications: "Applications", members: "Members" };
 const APPLICATION_COLUMNS = [
@@ -395,6 +396,12 @@ const sheetStatus = {
   }
 };
 const sheetQueue = new Map();
+/* รหัสที่ถูกลบบนเว็บ รอส่งไปลบแถวบนชีต (เก็บแยกตามชีต) */
+const sheetRemovals = { Applications: new Set(), Members: new Set() };
+function markSheetRemoved(storeName, id) {
+  const sheet = SHEET_NAMES[storeName];
+  if (sheet && id !== undefined && id !== null) sheetRemovals[sheet].add(String(id));
+}
 let sheetTimer = null;
 let sheetKeepaliveTimer = null;
 let sheetRun = null;
@@ -452,6 +459,7 @@ function buildSheetPayload(sheet) {
       columns,
       rows: rows.map((row) => columns.map((_, i) => (row[i] === undefined || row[i] === null ? "" : String(row[i])))),
       data,                        // สำเนาข้อมูลดิบ — ใช้กู้คืนกลับเข้าระบบได้ครบถ้วน
+      remove: [...sheetRemovals[sheet]],   // รหัสที่ถูกลบบนเว็บ → ให้ลบแถวนั้นบนชีต
       at: new Date().toISOString()
     };
   } finally { sheetBuilding = false; }
@@ -518,6 +526,7 @@ async function sendSheet(sheet) {
   const payload = buildSheetPayload(sheet);
   const startedAt = Date.now();
   await postToSheet(payload);
+  payload.remove.forEach((id) => sheetRemovals[sheet].delete(id));   // ส่งสำเร็จแล้ว ค่อยเคลียร์คิวลบ
   const at = new Date().toISOString();
   sheetStatus.sheets[sheet] = { at, error: null, rows: payload.rows.length };
   sheetStatus.lastSyncAt = at;
@@ -602,7 +611,10 @@ async function sheetsRawCached() {
   return sheetsRawCache;
 }
 
-/* เติมข้อมูลที่ดึงจากชีตกลับเข้าระบบ (เขียนทับข้อมูลปัจจุบัน)
+/* เติมข้อมูลที่ดึงจากชีตกลับเข้าระบบ แบบ "รวมเพิ่ม" (ไม่เขียนทับ ไม่ล้างของเดิม)
+   - รายการที่บนเว็บมีอยู่แล้ว (รหัสเดียวกัน) → เก็บของบนเว็บไว้ ไม่แตะ
+   - รายการที่มีบนชีตแต่ไม่มีบนเว็บ → ต่อท้ายเข้าไป
+   - ถ้าเว็บยังเป็นข้อมูลเริ่มต้นชั่วคราว (ดิสก์ว่าง) → ใช้ข้อมูลจากชีตทั้งชุด
    onlyMissing = true → เติมเฉพาะเมื่อบนเครื่องไม่มีข้อมูล (ใช้ตอนเปิดเซิร์ฟเวอร์) */
 async function applySheetRestore(items, { onlyMissing = false } = {}) {
   sheetRestoring = true;
@@ -611,7 +623,9 @@ async function applySheetRestore(items, { onlyMissing = false } = {}) {
     for (const [storeName, sheetName] of Object.entries(SHEET_NAMES)) {
       const store = storeName === "members" ? membersStore : appsStore;
       try {
-        const item = items && items[sheetName];
+        let item = items && items[sheetName];
+        /* ชีตนี้ไม่มีรายการเลย (เช่น ใบสมัคร 0 ฉบับ) แต่ชีตอื่นมีสำเนา → ถือว่าว่างเปล่า ไม่ใช่ error */
+        if (!item && items && Object.values(items).some(Boolean)) item = { data: [], at: "" };
         if (!item) throw new Error("ไม่พบสำเนาข้อมูลของชีตนี้บน Google ชีต");
         const list = item.data;
         if (!Array.isArray(list)) throw new Error("รูปแบบข้อมูลบนชีตไม่ถูกต้อง");
@@ -619,14 +633,23 @@ async function applySheetRestore(items, { onlyMissing = false } = {}) {
           report[sheetName] = { ok: true, skipped: true, count: list.length, at: item.at || "" };
           continue;
         }
-        if (!list.length && store.read().length) {
-          throw new Error("ข้อมูลบนชีตว่างเปล่า — ยกเลิกเพื่อกันข้อมูลหาย (ถ้าต้องการล้างข้อมูล ให้ลบที่หน้าแอดมิน)");
+        const current = store.read();
+        let result;
+        let added;
+        if (store.freshPlaceholder) {
+          result = list;                       // เว็บยังว่าง/เป็นข้อมูลชั่วคราว → ใช้ข้อมูลจากชีตทั้งชุด
+          added = list.length;
+        } else {
+          const have = new Set(current.map((x) => String(x && x.id)));
+          const fresh = list.filter((x) => x && x.id !== undefined && x.id !== null && !have.has(String(x.id)));
+          result = current.concat(fresh);      // ต่อท้ายเฉพาะที่ยังไม่มี
+          added = fresh.length;
         }
-        store.write(list);
+        if (added || store.freshPlaceholder) store.write(result);
         sheetStatus.lastRestoreAt = new Date().toISOString();
         sheetStatus.lastRestoreSource = `Google ชีต (${sheetName})`;
-        console.warn(`[sheets] ${storeName}: กู้คืนจาก Google ชีตสำเร็จ (${list.length} รายการ)`);
-        report[sheetName] = { ok: true, count: list.length, at: item.at || "" };
+        console.warn(`[sheets] ${storeName}: กู้คืนจาก Google ชีตสำเร็จ (เพิ่มใหม่ ${added} รายการ, รวม ${result.length})`);
+        report[sheetName] = { ok: true, count: result.length, added, kept: result.length - added, at: item.at || "" };
       } catch (err) {
         report[sheetName] = { ok: false, error: String((err && err.message) || err) };
         console.warn(`[sheets] ${storeName}: กู้คืนไม่สำเร็จ — ${report[sheetName].error}`);
@@ -704,11 +727,14 @@ function createStore(name, createEmpty) {
 
 const membersStore = createStore("members", () => DEFAULT_MEMBERS);
 const appsStore = createStore("applications", () => []);
+/* ตั้งค่าทั่วไปของเว็บ (เช่น เพลงเปิดเว็บที่แอดมินตั้งไว้) — เก็บเป็นอาเรย์ของ { id, ... } */
+const settingsStore = createStore("settings", () => []);
 const readMembers = () => membersStore.read();
 const writeMembers = (list) => membersStore.write(list);
 const readApps = () => appsStore.read();
 const writeApps = (list) => appsStore.write(list);
-const STORES = { members: membersStore, applications: appsStore };
+const readSettings = () => settingsStore.read();
+const STORES = { members: membersStore, applications: appsStore, settings: settingsStore };
 
 /* ============================================================
    2. HELPERS
@@ -1043,7 +1069,11 @@ function memberPayload(body, current = {}) {
     pattern: cleanChoice(body.pattern === undefined ? current.pattern : body.pattern, BOARD_PATTERNS),
     discord: cleanUrl(body.discord === undefined ? current.discord : body.discord),
     facebook: cleanUrl(body.facebook === undefined ? current.facebook : body.facebook),
-    tiktok: cleanUrl(body.tiktok === undefined ? current.tiktok : body.tiktok)
+    tiktok: cleanUrl(body.tiktok === undefined ? current.tiktok : body.tiktok),
+    /* เพลงประจำบอร์ด (1 เพลง) — เจ้าของบอร์ดและแอดมินแก้ได้ทั้งคู่ */
+    songTitle: cleanLine(body.songTitle === undefined ? current.songTitle : body.songTitle, 80),
+    songArtist: cleanLine(body.songArtist === undefined ? current.songArtist : body.songArtist, 80),
+    songUrl: cleanUrl(body.songUrl === undefined ? current.songUrl : body.songUrl)
   };
 }
 
@@ -1089,6 +1119,7 @@ app.delete("/api/members/:id", adminOnly, (req, res) => {
   const members = readMembers();
   const next = members.filter((m) => String(m.id) !== String(req.params.id));
   if (next.length === members.length) return res.status(404).json({ error: "ไม่พบสมาชิก" });
+  markSheetRemoved("members", req.params.id);
   writeMembers(next);
   res.json({ ok: true });
 });
@@ -1272,6 +1303,7 @@ app.delete("/api/applications/:id", adminOnly, (req, res) => {
   const apps = readApps();
   const next = apps.filter((a) => String(a.id) !== String(req.params.id));
   if (next.length === apps.length) return res.status(404).json({ error: "ไม่พบใบสมัคร" });
+  markSheetRemoved("applications", req.params.id);
   writeApps(next);
   res.json({ ok: true });
 });
@@ -1319,7 +1351,10 @@ app.put("/api/board/me", (req, res) => {
     pattern: body.pattern,
     discord: body.discord,
     facebook: body.facebook,
-    tiktok: body.tiktok
+    tiktok: body.tiktok,
+    songTitle: body.songTitle,
+    songArtist: body.songArtist,
+    songUrl: body.songUrl
   }, members[index]);
   const name = body.name === undefined ? members[index].name : data.name;
   if (!name) return res.status(400).json({ error: "กรุณาใส่ชื่อที่แสดงบนบอร์ด" });
@@ -1335,10 +1370,49 @@ app.put("/api/board/me", (req, res) => {
     discord: data.discord,
     facebook: data.facebook,
     tiktok: data.tiktok,
+    songTitle: data.songTitle,
+    songArtist: data.songArtist,
+    songUrl: data.songUrl,
     boardUpdatedAt: new Date().toISOString()
   };
   writeMembers(members);
   res.json(boardMember(members[index]));
+});
+
+/* ============================================================
+   9.5 SITE SONG (เพลงเปิดเว็บ — แอดมินตั้งในหลังบ้าน แล้วระบบเปิดตอนเข้าเว็บ)
+   ============================================================ */
+const SITE_SONG_ID = "siteSong";
+const getSiteSong = () => {
+  const row = readSettings().find((s) => s && s.id === SITE_SONG_ID);
+  if (!row || !row.url) return null;
+  return { title: cleanLine(row.title, 80), artist: cleanLine(row.artist, 80), url: String(row.url) };
+};
+
+app.get("/api/site-song", (req, res) => res.json(getSiteSong()));
+
+app.put("/api/site-song", adminOnly, (req, res) => {
+  const body = req.body || {};
+  const url = cleanUrl(body.url);
+  if (!url) return res.status(400).json({ error: "ลิงก์เพลงต้องขึ้นต้นด้วย http:// หรือ https://" });
+  const entry = {
+    id: SITE_SONG_ID,
+    title: cleanLine(body.title, 80),
+    artist: cleanLine(body.artist, 80),
+    url,
+    updatedAt: new Date().toISOString()
+  };
+  const list = readSettings().filter((s) => !s || s.id !== SITE_SONG_ID);
+  list.push(entry);
+  settingsStore.write(list);
+  res.json(getSiteSong());
+});
+
+app.delete("/api/site-song", adminOnly, (req, res) => {
+  const list = readSettings();
+  const next = list.filter((s) => s && s.id !== SITE_SONG_ID);
+  if (next.length !== list.length) settingsStore.write(next);
+  res.json(null);
 });
 
 /* ============================================================
@@ -1348,6 +1422,7 @@ app.put("/api/board/me", (req, res) => {
 app.post("/api/backup", adminOnly, async (req, res) => {
   membersStore.write(readMembers());
   appsStore.write(readApps());
+  settingsStore.write(readSettings());
   if (backupStatus.configured) await flushBackup();
   res.json({
     ok: true,
@@ -1388,7 +1463,7 @@ app.post("/api/sheets/sync", adminOnly, async (req, res) => {
 
 app.get("/api/sheets/status", adminOnly, (req, res) => res.json(sheetsSummary()));
 
-/* กู้ข้อมูลกลับจาก Google ชีต (เขียนทับข้อมูลปัจจุบัน) */
+/* กู้ข้อมูลกลับจาก Google ชีต — รวมเพิ่มเข้าข้อมูลปัจจุบัน ไม่เขียนทับ */
 app.post("/api/sheets/restore", adminOnly, async (req, res) => {
   if (!sheetStatus.configured) {
     return res.status(400).json({ error: "ยังไม่ได้ตั้งค่า SHEETS_WEBHOOK_URL — ดูวิธีตั้งค่าได้ในหน้าแอดมิน" });

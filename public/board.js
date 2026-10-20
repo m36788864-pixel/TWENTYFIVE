@@ -90,6 +90,10 @@ function showEditor(member) {
   boardForm.elements.facebook.value = member.facebook || member.facebookIc || "";
   boardForm.elements.tiktok.value = member.tiktok || "";
   photoInput.value = "";
+  boardForm.elements.songTitle.value = member.songTitle || "";
+  boardForm.elements.songArtist.value = member.songArtist || "";
+  boardForm.elements.songUrl.value = member.songUrl || "";
+  lastSongUrl = undefined;          // บังคับให้เรนเดอร์ตัวเล่นใหม่รอบนี้
   applyTheme(member.theme || "");
   applyPattern(member.pattern || "plain");
 
@@ -170,6 +174,30 @@ function updatePreview() {
     ["ติ๊กต๊อก", boardForm.elements.tiktok.value.trim()]
   ].filter(([, v]) => v);
   pv.meta.innerHTML = rows.map(([label, value]) => `<span>${label}<b>${/^https?:/.test(value) ? "มีลิงก์" : esc(value)}</b></span>`).join("");
+
+  syncPreviewSong();
+}
+
+/* เพลงประจำบอร์ดในหน้าตัวอย่าง — สร้างตัวเล่นใหม่เฉพาะตอนลิงก์เปลี่ยน (กัน iframe รีโหลดตอนพิมพ์) */
+let lastSongUrl;
+function syncPreviewSong() {
+  const box = $("#pv-song");
+  const song = {
+    title: boardForm.elements.songTitle.value.trim(),
+    artist: boardForm.elements.songArtist.value.trim(),
+    url: boardForm.elements.songUrl.value.trim()
+  };
+  if (song.url !== lastSongUrl) {
+    lastSongUrl = song.url;
+    T25Song.render(box, song);
+    return;
+  }
+  const meta = box.querySelector(".t25-song-meta");
+  if (!meta) return;
+  const title = meta.querySelector("b");
+  const artist = meta.querySelector("em");
+  if (title) title.textContent = song.title || "เพลงประจำบอร์ด";
+  if (artist) artist.textContent = song.artist;
 }
 
 ["input", "change"].forEach((evt) => boardForm.addEventListener(evt, updatePreview));

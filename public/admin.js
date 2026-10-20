@@ -121,6 +121,62 @@ memberForm.addEventListener("submit", async (e) => {
   } catch (err) { $("#form-msg").textContent = err.message; }
 });
 
+/* ---------- 3.5 SITE SONG (เพลงเปิดเว็บ) ---------- */
+const siteSongForm = $("#site-song-form");
+const siteSongMsg = $("#site-song-msg");
+let currentSiteSong = null;
+
+function renderSiteSong(song) {
+  currentSiteSong = song || null;
+  const hasSong = !!(song && song.url);
+  siteSongForm.elements.title.value = hasSong ? (song.title || "") : "";
+  siteSongForm.elements.artist.value = hasSong ? (song.artist || "") : "";
+  siteSongForm.elements.url.value = hasSong ? (song.url || "") : "";
+  $("#site-song-clear").hidden = !hasSong;
+
+  const badge = $("#site-song-badge");
+  badge.className = "badge " + (hasSong ? "approved" : "pending");
+  badge.innerHTML = `<i></i>${hasSong ? "กำลังเปิด" : "ยังไม่ตั้งค่า"}`;
+
+  const preview = $("#site-song-preview");
+  if (window.T25Song) T25Song.render(preview, song || { title: "", artist: "", url: "" });
+  preview.hidden = !hasSong;
+}
+
+async function loadSiteSong() {
+  try {
+    const song = await api("/api/site-song");
+    renderSiteSong(song);
+  } catch (err) {
+    siteSongMsg.textContent = err.message;
+  }
+}
+
+siteSongForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const fd = new FormData(siteSongForm);
+  const body = Object.fromEntries(fd.entries());
+  if (!String(body.url || "").trim()) { siteSongMsg.textContent = "กรุณาใส่ลิงก์เพลงก่อน"; return; }
+  siteSongMsg.textContent = "กำลังบันทึก...";
+  siteSongMsg.className = "message";
+  try {
+    const song = await api("/api/site-song", { method: "PUT", body: JSON.stringify(body) });
+    renderSiteSong(song);
+    siteSongMsg.textContent = "บันทึกแล้ว — เพลงจะเปิดตอนเข้าเว็บ ✓";
+    siteSongMsg.className = "message ok";
+  } catch (err) { siteSongMsg.textContent = err.message; }
+});
+
+$("#site-song-clear").addEventListener("click", async () => {
+  if (!confirm("ล้างเพลงเปิดเว็บ? (ผู้ชมจะไม่ได้ยินเพลงตอนเปิดเว็บ)")) return;
+  try {
+    await api("/api/site-song", { method: "DELETE" });
+    renderSiteSong(null);
+    siteSongMsg.textContent = "ล้างเพลงออกแล้ว";
+    siteSongMsg.className = "message ok";
+  } catch (err) { siteSongMsg.textContent = err.message; }
+});
+
 /* ---------- 4. MEMBER LIST ---------- */
 const TIERS = ["BOSS", "LEADER", "SUPPORT", "MEMBER"];
 let allMembers = [];
@@ -210,6 +266,7 @@ async function refresh() {
   loadApplications();
   loadStatus();
   loadDiscordStatus();
+  loadSiteSong();
 }
 
 $("#admin-tabs").addEventListener("click", (e) => {
@@ -334,7 +391,7 @@ $("#admin-list").addEventListener("click", async (e) => {
       const list = await api("/api/members/full");
       const m = list.find((x) => String(x.id) === edit.dataset.edit);
       if (!m) return;
-      for (const k of ["id", "name", "role", "group", "image", "description", "discord", "facebook", "tiktok", "icAge", "facebookIc", "discordUser", "driveLink", "tagline", "status", "theme", "pattern"]) memberForm.elements[k].value = k === "group" ? ({ LEADERSHIP: "LEADER", MEMBERS: "MEMBER" }[m[k]] || m[k] || "MEMBER") : (m[k] || "");
+      for (const k of ["id", "name", "role", "group", "image", "description", "discord", "facebook", "tiktok", "icAge", "facebookIc", "discordUser", "driveLink", "tagline", "status", "theme", "pattern", "songTitle", "songArtist", "songUrl"]) memberForm.elements[k].value = k === "group" ? ({ LEADERSHIP: "LEADER", MEMBERS: "MEMBER" }[m[k]] || m[k] || "MEMBER") : (m[k] || "");
       showPhotoPreview(m.image || "");
       $("#form-title").textContent = "แก้ไขสมาชิก";
       $("#cancel-edit").hidden = false;
@@ -652,24 +709,19 @@ $("#sheets-sync").addEventListener("click", async () => {
   }
 });
 
-/* กู้ข้อมูลกลับจาก Google ชีต (เขียนทับข้อมูลปัจจุบัน) */
+/* กู้ข้อมูลกลับจาก Google ชีต — โหลดเข้ามาทันที รวมเพิ่มเข้าข้อมูลที่มีอยู่ (ไม่เขียนทับ ไม่ต้องยืนยัน) */
 $("#sheets-restore").addEventListener("click", async () => {
   const button = $("#sheets-restore");
-  const sure = confirm(
-    "กู้ข้อมูลจาก Google ชีตกลับเข้าระบบ?\n\n" +
-    "• ชื่อผู้ใช้/รหัสผ่านบอร์ด/ผลงานบอร์ดจะกลับมาครบทุกรายการ\n" +
-    "▲ ข้อมูลสมาชิกและใบสมัครบนเว็บตอนนี้จะถูกเขียนทับด้วยสำเนาล่าสุดบนชีต\n" +
-    "(สำเนาถูกส่งขึ้นชีตทุกครั้งที่บันทึก จึงเป็นข้อมูลล่าสุดอยู่แล้ว)"
-  );
-  if (!sure) return;
   button.disabled = true;
-  button.textContent = "กำลังกู้...";
+  button.textContent = "กำลังโหลด...";
   try {
     const r = await api("/api/sheets/restore", { method: "POST" });
     await refresh();
-    const summary = Object.entries(r.report || {}).map(([sheet, v]) => `${sheet}: ${v.ok ? `${v.count} รายการ` : v.error}`).join("\n");
-    alert(`กู้ข้อมูลสำเร็จ\n\n${summary}`);
-    button.textContent = "กู้แล้ว ✓";
+    await loadStatus();
+    const summary = Object.entries(r.report || {}).map(([sheet, v]) =>
+      `${sheet}: ${v.ok ? `เพิ่มใหม่ ${v.added || 0} · มีอยู่แล้ว ${v.kept || 0} · รวม ${v.count} รายการ` : v.error}`).join("\n");
+    alert(`โหลดข้อมูลจากชีตแล้ว\n\n${summary}`);
+    button.textContent = "โหลดแล้ว ✓";
   } catch (err) {
     alert(err.message);
     button.textContent = "กู้ไม่สำเร็จ";
@@ -735,7 +787,7 @@ function renderSheets(s) {
   badge.className = "badge " + (errors.length ? "rejected" : s.lastSyncAt ? "approved" : "pending");
   badge.innerHTML = `<i></i>${errors.length ? "SYNC ERROR" : s.lastSyncAt ? "SHEET OK" : "รอส่ง"}`;
   const lines = [
-    `เขียนทับทั้งชีตทุกครั้ง · ไม่ถี่กว่าทุก ${esc(s.intervalSec)} วิ · รหัสลับ (SHEETS_SECRET): <b>${s.secretSet ? "ตั้งแล้ว" : "ยังไม่ได้ตั้ง"}</b>`,
+    `บันทึกต่อท้าย/อัปเดตเฉพาะแถวที่เปลี่ยน (ไม่ล้างชีต) · ไม่ถี่กว่าทุก ${esc(s.intervalSec)} วิ · รหัสลับ (SHEETS_SECRET): <b>${s.secretSet ? "ตั้งแล้ว" : "ยังไม่ได้ตั้ง"}</b>`,
     s.keepaliveSec ? `★ ระบบส่งข้อมูลขึ้นชีตให้เองทุก ${esc(s.keepaliveSec)} วินาที + ทุกครั้งที่มีการแก้ไข → กดปุ่มกู้ได้ทุกเมื่อ ไม่ต้องมากดส่งเอง` : `★ ระบบส่งข้อมูลขึ้นชีตให้เองทุกครั้งที่มีการแก้ไข`,
     `ชีต Applications: ${apps.at ? `${esc(apps.rows)} แถว · ${when(apps.at)}` : "ยังไม่เคยส่ง"}`,
     `ชีต Members: ${members.at ? `${esc(members.rows)} แถว · ${when(members.at)}` : "ยังไม่เคยส่ง"}`,

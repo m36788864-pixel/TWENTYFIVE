@@ -202,41 +202,86 @@ footer .brand small{letter-spacing:2px}
 }
 
 
-/* ---------- MEMBER PROFILE MODAL ---------- */
+/* ---------- MEMBER PROFILE MODAL (แนวตั้ง + เอฟเฟกต์) ---------- */
 body.profile-open{overflow:hidden}
-.profile-overlay{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:24px;background:rgba(5,5,7,.68);backdrop-filter:blur(13px);-webkit-backdrop-filter:blur(13px);opacity:0;visibility:hidden;transition:opacity .28s ease,visibility .28s ease}
+.profile-overlay{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:24px;background:rgba(5,5,7,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);opacity:0;visibility:hidden;transition:opacity .28s ease,visibility .28s ease}
 .profile-overlay.open{opacity:1;visibility:visible}
-.profile-modal{position:relative;display:grid;grid-template-columns:minmax(230px,.9fr) minmax(300px,1.1fr);width:min(760px,100%);min-height:365px;overflow:hidden;border-radius:2.6rem;background:linear-gradient(135deg,rgba(14,14,17,.98),rgba(2,2,3,.98));border:1px solid rgba(255,255,255,.25);box-shadow:0 28px 100px rgba(0,0,0,.75),inset 0 1px rgba(255,255,255,.08);transform:translateY(16px) scale(.985);transition:transform .3s ease}
-.profile-overlay.open .profile-modal{transform:translateY(0) scale(1)}
-.profile-close{position:absolute;z-index:2;right:14px;top:14px;width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.05);color:#aaa;font:300 24px/1 Arial;cursor:pointer;display:grid;place-items:center;transition:color .2s,transform .2s,background .2s}
-.profile-close:hover{color:#fff;background:rgba(255,255,255,.12);transform:rotate(90deg)}
-.profile-left{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:42px 24px 32px;border-right:1px solid rgba(255,255,255,.1);background:radial-gradient(ellipse at 50% 30%,rgba(255,255,255,.1),transparent 60%),linear-gradient(180deg,rgba(255,255,255,.025),transparent)}
-.profile-avatar{position:relative;width:124px;height:124px;display:grid;place-items:center;margin-bottom:18px;border-radius:50%;border:1px solid rgba(255,255,255,.38);background:radial-gradient(circle at 30% 25%,#33333a,#08080a 72%);box-shadow:0 0 0 8px rgba(255,255,255,.025),0 0 35px rgba(255,255,255,.06);overflow:hidden}
+.profile-modal{--mx:50%;--my:20%;position:relative;display:flex;flex-direction:column;width:min(430px,100%);max-height:calc(100dvh - 48px);overflow:auto;overflow-x:hidden;overscroll-behavior:contain;border-radius:2.4rem;background:linear-gradient(180deg,rgba(15,15,19,.985),rgba(2,2,3,.99));border:1px solid rgba(255,255,255,.22);box-shadow:0 30px 110px rgba(0,0,0,.8),inset 0 1px rgba(255,255,255,.08);transform:translateY(18px) scale(.97);opacity:0;transition:transform .34s cubic-bezier(.2,.9,.25,1),opacity .3s ease}
+.profile-overlay.open .profile-modal{transform:translateY(0) scale(1);opacity:1}
+/* ขอบเรืองไล่เฉดสีธีม */
+.profile-modal::before{content:"";position:absolute;z-index:4;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(180deg,rgba(var(--acc,255,255,255),.5),rgba(255,255,255,.06) 32%,rgba(255,255,255,.05) 68%,rgba(var(--acc,255,255,255),.36));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;pointer-events:none}
+/* เอฟเฟกต์พื้นหลังทั้งหมดอยู่ในเลเยอร์นี้ */
+.profile-fx{position:absolute;z-index:0;inset:0;overflow:hidden;border-radius:inherit;pointer-events:none}
+.fx-orb{position:absolute;width:230px;height:230px;border-radius:50%;filter:blur(46px);animation:float 9s ease-in-out infinite}
+.fx-a{top:-90px;left:-70px;background:radial-gradient(circle,rgba(var(--acc,255,255,255),.2),transparent 70%)}
+.fx-b{bottom:-110px;right:-80px;background:radial-gradient(circle,rgba(var(--acc,255,255,255),.13),transparent 70%);animation-delay:-4s}
+.fx-scan{position:absolute;left:0;right:0;top:0;height:26%;background:linear-gradient(180deg,rgba(var(--acc,255,255,255),.09),transparent);animation:fxScan 7s ease-in-out infinite}
+@keyframes fxScan{0%{transform:translateY(-40%);opacity:.2}45%{opacity:.85}100%{transform:translateY(420%);opacity:.1}}
+.fx-spot{position:absolute;inset:0;background:radial-gradient(340px circle at var(--mx) var(--my),rgba(255,255,255,.09),transparent 62%)}
+.fx-sparks i{position:absolute;width:4px;height:4px;border-radius:50%;background:rgb(var(--acc,255,255,255));box-shadow:0 0 9px rgba(var(--acc,255,255,255),.9);animation:sparkTwinkle 2.6s ease-in-out infinite}
+@keyframes sparkTwinkle{0%,100%{opacity:0;transform:translateY(0) scale(.6)}50%{opacity:.95;transform:translateY(-14px) scale(1)}}
+.profile-close{position:absolute;z-index:5;right:14px;top:14px;width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(10,10,12,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:#aaa;font:300 24px/1 Arial;cursor:pointer;display:grid;place-items:center;transition:color .2s,transform .2s,background .2s}
+.profile-close:hover{color:#fff;background:rgba(255,255,255,.14);transform:rotate(90deg)}
+/* ===== ส่วนหัว: รูปโปร + ชื่อ จัดกึ่งกลาง ===== */
+.profile-head{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;text-align:center;padding:40px 26px 16px;background:radial-gradient(ellipse at 50% 26%,rgba(var(--acc,255,255,255),.15),transparent 62%),linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
+.profile-avatar-wrap{position:relative;display:grid;place-items:center;width:146px;height:146px;margin-bottom:16px}
+.profile-avatar-wrap::after{content:"";position:absolute;inset:-6px;border-radius:50%;box-shadow:0 0 34px rgba(var(--acc,255,255,255),.26);animation:avatarHalo 3.2s ease-in-out infinite}
+@keyframes avatarHalo{0%,100%{opacity:.45;transform:scale(.97)}50%{opacity:1;transform:scale(1.03)}}
+.profile-avatar-wrap::before{content:"";position:absolute;z-index:3;inset:0;border-radius:50%;background:linear-gradient(115deg,transparent 42%,rgba(255,255,255,.26) 50%,transparent 58%);background-size:260% 100%;animation:avatarShine 4.5s ease-in-out infinite;pointer-events:none}
+@keyframes avatarShine{0%{background-position:130% 0}55%,100%{background-position:-70% 0}}
+.avatar-ring{position:absolute;inset:0;border-radius:50%;border:1px dashed rgba(var(--acc,255,255,255),.4)}
+.ring-1{animation:spin 15s linear infinite}
+.ring-2{inset:-13px;border:1px solid rgba(255,255,255,.1);border-top-color:rgba(var(--acc,255,255,255),.85);animation:spin 7.5s linear infinite reverse}
+.profile-avatar{position:relative;z-index:2;width:124px;height:124px;display:grid;place-items:center;border-radius:50%;border:1px solid rgba(255,255,255,.38);background:radial-gradient(circle at 30% 25%,#33333a,#08080a 72%);box-shadow:0 0 0 8px rgba(255,255,255,.025),0 14px 34px rgba(0,0,0,.6);overflow:hidden}
 .profile-avatar>span{font:800 2rem Orbitron;background:linear-gradient(#fff,#85858e);-webkit-background-clip:text;background-clip:text;color:transparent}
 .profile-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%;z-index:1}
 .profile-avatar .profile-avatar-fallback{display:none}
-.profile-member-tag{font:600 .55rem Orbitron;letter-spacing:.28em;color:#a7a7b0;margin-bottom:8px}
-.profile-left h2{max-width:100%;font:700 clamp(27px,4vw,39px)/.98 Teko,sans-serif;letter-spacing:.08em;overflow-wrap:anywhere}
-.profile-id{margin:12px 0 0;color:#696970;font:500 .52rem Orbitron;letter-spacing:.2em}
-.profile-right{display:flex;flex-direction:column;padding:35px 28px 24px;min-width:0}
-.profile-status{display:flex;align-items:center;gap:9px;font:600 .56rem Orbitron;letter-spacing:.16em;color:#d8d8dc;padding-right:22px}
-.profile-status small{margin-left:auto;color:#85858d;font-size:.48rem;text-align:right}
-.status-dot{width:7px;height:7px;flex:0 0 7px;border-radius:50%;background:#ddd;box-shadow:0 0 10px rgba(255,255,255,.45)}
-.profile-divider{height:1px;margin:17px 0 20px;background:linear-gradient(90deg,rgba(255,255,255,.3),rgba(255,255,255,.04))}
+.profile-member-tag{font:600 .55rem Orbitron;letter-spacing:.28em;color:#a7a7b0;margin-bottom:6px}
+.profile-head h2{max-width:100%;margin:2px 0 0;font:700 clamp(30px,7vw,42px)/1 Teko,sans-serif;letter-spacing:.07em;overflow-wrap:anywhere;background:linear-gradient(180deg,#fff 32%,#9a9aa3);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 3px 18px rgba(0,0,0,.7))}
+.profile-status{display:inline-flex;align-items:center;gap:8px;margin-top:13px;padding:7px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);font:600 .54rem Orbitron;letter-spacing:.14em;color:#d8d8dc}
+.profile-status small{padding-left:8px;border-left:1px solid rgba(255,255,255,.14);color:#85858d;font-size:.46rem}
+.status-dot{width:7px;height:7px;flex:0 0 7px;border-radius:50%;background:#ddd;box-shadow:0 0 10px rgba(255,255,255,.45);animation:statusBlink 1.9s ease-in-out infinite}
+@keyframes statusBlink{0%,100%{opacity:.55}50%{opacity:1}}
+.profile-id{margin:11px 0 0;color:#696970;font:500 .52rem Orbitron;letter-spacing:.2em}
+/* ===== ส่วนล่าง: ประวัติ ===== */
+.profile-body{position:relative;z-index:1;display:flex;flex-direction:column;padding:2px 26px 26px;min-width:0}
+.profile-divider{position:relative;height:2px;margin:2px 0 18px;border-radius:2px;background:rgba(255,255,255,.07);overflow:hidden}
+.profile-divider i{position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(var(--acc,255,255,255),.85),transparent);transform:translateX(-100%)}
+.profile-overlay.open .profile-divider i{animation:dividerSweep 1.5s cubic-bezier(.2,.9,.25,1) .2s 2}
+@keyframes dividerSweep{to{transform:translateX(100%)}}
 .profile-kicker{margin:0 0 12px;color:#777780;font:500 .48rem Orbitron;letter-spacing:.13em;overflow-wrap:anywhere}
-.profile-data-panel{position:relative;flex:1;min-height:105px;padding:18px;border:1px solid rgba(255,255,255,.14);border-radius:1.6rem;background:linear-gradient(145deg,rgba(255,255,255,.025),rgba(0,0,0,.18));overflow:hidden}
+.profile-data-panel{position:relative;flex:1;min-height:110px;padding:18px;border:1px solid rgba(255,255,255,.14);border-radius:1.6rem;background:linear-gradient(145deg,rgba(255,255,255,.025),rgba(0,0,0,.18));overflow:hidden}
 .profile-data-panel>small{font:600 .5rem Orbitron;letter-spacing:.2em;color:#73737d}
-.profile-data-panel p{position:relative;z-index:1;margin:13px 0 0;color:#c3c3ca;font:300 .9rem/1.8 Kanit,sans-serif;overflow-wrap:anywhere}
+.profile-history{margin:12px 0 0;font:600 .5rem Orbitron;letter-spacing:.24em;color:rgba(var(--acc,255,255,255),.92)}
+.profile-data-panel p:last-child{position:relative;z-index:1;margin:8px 0 0;color:#c3c3ca;font:300 .9rem/1.8 Kanit,sans-serif;overflow-wrap:anywhere}
+.panel-scanline{position:absolute;z-index:0;left:0;right:0;top:0;height:36%;background:linear-gradient(180deg,rgba(var(--acc,255,255,255),.1),transparent);pointer-events:none;animation:panelScan 5.2s ease-in-out infinite}
+@keyframes panelScan{0%,100%{transform:translateY(-45%)}50%{transform:translateY(320%)}}
 .profile-watermark{position:absolute;right:16px;top:10px;color:rgba(255,255,255,.045);font:800 76px/1 Orbitron}
-.profile-footer{margin-top:20px}
+.profile-footer{margin-top:18px}
 .profile-footer>p{margin:0 0 13px;color:#777780;font:500 .48rem Orbitron;letter-spacing:.18em}
 .profile-actions{display:flex;flex-wrap:wrap;gap:8px}
-.profile-link{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 17px;border-radius:999px;border:1px solid rgba(255,255,255,.2);color:#ddd;text-decoration:none;font:600 .5rem Orbitron;letter-spacing:.08em;transition:background .2s,border-color .2s,transform .2s}
-.profile-link:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.6);transform:translateY(-2px)}
+.profile-link{position:relative;display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 17px;border-radius:999px;border:1px solid rgba(255,255,255,.2);color:#ddd;text-decoration:none;font:600 .5rem Orbitron;letter-spacing:.08em;overflow:hidden;transition:background .2s,border-color .2s,transform .2s,box-shadow .2s}
+.profile-link::after{content:"";position:absolute;top:0;bottom:0;left:-70%;width:45%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.22),transparent);transform:skewX(-18deg);transition:left .45s ease}
+.profile-link:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.6);transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.4)}
+.profile-link:hover::after{left:130%}
 .profile-link.primary{border-color:rgba(105,170,255,.65);color:#f2f6ff}
 .profile-link.primary:hover{background:rgba(75,135,220,.15)}
 .profile-no-links{font:500 .48rem Orbitron;letter-spacing:.1em;color:#676770}
-@media(max-width:600px){.profile-overlay{padding:14px}.profile-modal{grid-template-columns:1fr;max-width:420px;max-height:calc(100dvh - 28px);overflow:auto;border-radius:2.2rem}.profile-left{padding:28px 22px 22px;border-right:0;border-bottom:1px solid rgba(255,255,255,.1)}.profile-avatar{width:90px;height:90px;margin-bottom:12px}.profile-left h2{font-size:32px}.profile-right{padding:22px}.profile-data-panel{min-height:80px}}
+/* แอนิเมชันทยอยเข้ามาของแต่ละชิ้น */
+.profile-overlay.open .profile-head>*,.profile-overlay.open .profile-body>*{animation:p25rise .55s cubic-bezier(.2,.9,.25,1) both}
+.profile-overlay.open .profile-head>*:nth-child(1){animation-delay:.04s}
+.profile-overlay.open .profile-head>*:nth-child(2){animation-delay:.1s}
+.profile-overlay.open .profile-head>*:nth-child(3){animation-delay:.16s}
+.profile-overlay.open .profile-head>*:nth-child(4){animation-delay:.22s}
+.profile-overlay.open .profile-head>*:nth-child(5){animation-delay:.28s}
+.profile-overlay.open .profile-head>*:nth-child(6){animation-delay:.34s}
+.profile-overlay.open .profile-body>*:nth-child(1){animation-delay:.3s}
+.profile-overlay.open .profile-body>*:nth-child(2){animation-delay:.36s}
+.profile-overlay.open .profile-body>*:nth-child(3){animation-delay:.42s}
+.profile-overlay.open .profile-body>*:nth-child(4){animation-delay:.48s}
+.profile-overlay.open .profile-body>*:nth-child(5){animation-delay:.54s}
+@keyframes p25rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:600px){.profile-overlay{padding:14px}.profile-modal{max-height:calc(100dvh - 28px);border-radius:2.2rem}.profile-head{padding:30px 22px 14px}.profile-avatar-wrap{width:120px;height:120px;margin-bottom:12px}.profile-avatar{width:102px;height:102px}.profile-body{padding:2px 22px 24px}.profile-data-panel{min-height:80px}}
 
 
 /* ============================================================
@@ -340,7 +385,7 @@ a.op-social:hover{color:#fff;border-color:rgba(255,255,255,.65);background:rgba(
 
 /* tagline ในหน้าโปรไฟล์ */
 .profile-tagline{margin:10px 0 0;font:600 .55rem Orbitron;letter-spacing:.24em;text-transform:uppercase;color:rgba(var(--acc),.95)}
-.profile-modal[class*="board-"] .profile-left{background:radial-gradient(ellipse at 50% 30%,rgba(var(--acc),.17),transparent 62%),linear-gradient(180deg,rgba(255,255,255,.025),transparent)}
+.profile-modal[class*="board-"] .profile-head{background:radial-gradient(ellipse at 50% 26%,rgba(var(--acc),.17),transparent 62%),linear-gradient(180deg,rgba(255,255,255,.025),transparent)}
 .profile-modal[class*="board-"] .profile-avatar{border-color:rgba(var(--acc),.55);box-shadow:0 0 0 8px rgba(var(--acc),.06),0 0 38px rgba(var(--acc),.12)}
 .profile-modal[class*="board-"] .profile-member-tag{color:rgba(var(--acc),.92)}
 .profile-modal[class*="board-"] .profile-status{color:rgba(var(--acc),.95)}
@@ -350,7 +395,7 @@ a.op-social:hover{color:#fff;border-color:rgba(255,255,255,.65);background:rgba(
 .profile-modal[class*="board-"] .profile-watermark{color:rgba(var(--acc),.07)}
 .profile-modal[class*="board-"] .profile-link.primary{border-color:rgba(var(--acc),.7);color:#fff}
 .profile-modal[class*="board-"] .profile-link.primary:hover{background:rgba(var(--acc),.16)}
-.profile-modal.pat-grid .profile-right{background-image:linear-gradient(rgba(var(--acc),.055) 1px,transparent 1px),linear-gradient(90deg,rgba(var(--acc),.055) 1px,transparent 1px);background-size:26px 26px}
-.profile-modal.pat-dots .profile-right{background-image:radial-gradient(rgba(var(--acc),.16) 1px,transparent 1px);background-size:16px 16px}
-.profile-modal.pat-glow .profile-right{background-image:radial-gradient(ellipse 80% 40% at 50% 0%,rgba(var(--acc),.18),transparent 70%)}
+.profile-modal.pat-grid .profile-body{background-image:linear-gradient(rgba(var(--acc),.055) 1px,transparent 1px),linear-gradient(90deg,rgba(var(--acc),.055) 1px,transparent 1px);background-size:26px 26px}
+.profile-modal.pat-dots .profile-body{background-image:radial-gradient(rgba(var(--acc),.16) 1px,transparent 1px);background-size:16px 16px}
+.profile-modal.pat-glow .profile-body{background-image:radial-gradient(ellipse 80% 40% at 50% 0%,rgba(var(--acc),.18),transparent 70%)}
 

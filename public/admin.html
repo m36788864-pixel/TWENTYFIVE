@@ -180,9 +180,9 @@
                         <li><b>Deploy → New deployment → Web app</b> · Execute as: <b>Me</b> · Who has access: <b>Anyone</b> แล้วคัดลอก URL ที่ลงท้าย <code>/exec</code></li>
                         <li>ตั้งตัวแปรแวดล้อม: <code>SHEETS_WEBHOOK_URL</code> = URL นั้น และ <code>SHEETS_SECRET</code> = รหัสเดียวกับ <code>TOKEN</code></li>
                         <li>จากนี้ชีต <b>Applications</b> (ใบสมัคร) และ <b>Members</b> (รายชื่อสมาชิก) จะถูกสร้างและอัปเดตให้เองทุกครั้งที่มีการบันทึก</li>
-                        <li><b>กู้คืน:</b> ระบบเก็บสำเนาข้อมูลดิบไว้ในชีตลับ <code>_raw</code> ทุกครั้งที่ส่ง (อย่าลบชีตนี้) — ถ้าดิสก์เซิร์ฟเวอร์หาย ระบบจะดึงกลับให้เองตอนเปิดเซิร์ฟเวอร์ หรือกดปุ่ม <b>กู้ข้อมูลจากชีตกลับมา</b> ได้ทันที</li>
+                        <li><b>กู้คืน:</b> ระบบเก็บสำเนาข้อมูลดิบไว้ในชีตลับ <code>_raw</code> ทุกครั้งที่ส่ง (อย่าลบชีตนี้) — ถ้าดิสก์เซิร์ฟเวอร์หาย ระบบจะดึงกลับให้เองตอนเปิดเซิร์ฟเวอร์ หรือกดปุ่ม <b>กู้ข้อมูลจากชีตกลับมา</b> ได้ทันที (โหลดเข้ามาต่อท้ายเลย ไม่เขียนทับของเดิม)</li>
                     </ol>
-                    <p class="muted" style="margin:10px 0 0">▲ ชีต Members มีคอลัมน์ชื่อผู้ใช้/รหัสผ่านบอร์ด — ควรตั้งชีตเป็น <b>ส่วนตัว</b> ไม่แชร์เป็นสาธารณะ<br>▲ แก้ข้อมูลในชีตด้วยมือไม่มีผลกับเว็บ (ระบบเขียนทับทุกครั้ง) — ให้แก้ที่หน้าแอดมินหรือบอร์ดแทน</p>
+                    <p class="muted" style="margin:10px 0 0">▲ ชีต Members มีคอลัมน์ชื่อผู้ใช้/รหัสผ่านบอร์ด — ควรตั้งชีตเป็น <b>ส่วนตัว</b> ไม่แชร์เป็นสาธารณะ<br>▲ แก้ข้อมูลในชีตด้วยมือไม่มีผลกับเว็บ (ระบบอัปเดตแถวตามรหัสทุกครั้ง แก้ที่ชีตอาจถูกแก้กลับ) — ให้แก้ที่หน้าแอดมินหรือบอร์ดแทน</p>
                 </details>
             </div>
 
@@ -206,6 +206,68 @@
                         <li>ทางที่ดีให้ผู้สมัครกรอก <b>User ID</b> (ตัวเลข 17-20 หลัก) ตอนสมัคร — บอทจะส่งได้แม่นที่สุด</li>
                     </ol>
                 </details>
+            </div>
+
+            <!-- Site Song (เพลงเปิดเว็บ — เล่นตอนเข้าเว็บ) -->
+            <div class="panel" id="site-song-panel">
+
+                <div class="list-head">
+                    <div>
+                        <h2>เพลงเปิดเว็บ</h2>
+                        <p class="muted" style="margin:6px 0 0">
+                            เพลงที่จะเล่นอัตโนมัติตอนผู้ชมเปิดเว็บ (ตัวเล่นลอยที่มุมล่างขวาของทุกหน้า)
+                            — วางลิงก์ YouTube / YouTube Music / Spotify / SoundCloud / Apple Music ระบบจะฝังตัวเล่นให้เอง
+                        </p>
+                    </div>
+                    <span id="site-song-badge" class="badge"><i></i>MUSIC</span>
+                </div>
+
+                <form id="site-song-form" class="member-form">
+
+                    <label>
+                        ชื่อเพลง
+
+                        <input
+                            name="title"
+                            maxlength="80"
+                            placeholder="เช่น ชื่อเพลง"
+                        >
+                    </label>
+
+                    <label>
+                        ศิลปิน
+
+                        <input
+                            name="artist"
+                            maxlength="80"
+                            placeholder="เช่น ชื่อศิลปิน"
+                        >
+                    </label>
+
+                    <label class="full">
+                        ลิงก์เพลง
+
+                        <input
+                            name="url"
+                            type="url"
+                            placeholder="https://youtu.be/... หรือ https://open.spotify.com/track/..."
+                        >
+                    </label>
+
+                    <div class="form-actions full">
+                        <button class="silver-btn" type="submit">
+                            บันทึกเพลงเปิดเว็บ
+                        </button>
+
+                        <button class="ghost" id="site-song-clear" type="button" hidden>
+                            ล้างเพลงออก
+                        </button>
+
+                        <span id="site-song-msg" class="message"></span>
+                    </div>
+                </form>
+
+                <div id="site-song-preview" hidden style="margin-top:16px;max-width:420px"></div>
             </div>
 
             <!-- Member Form -->
@@ -410,6 +472,36 @@
                         >
                     </label>
 
+                    <label>
+                        เพลงประจำบอร์ด (ชื่อเพลง)
+
+                        <input
+                            name="songTitle"
+                            maxlength="80"
+                            placeholder="1 เพลงต่อบอร์ด — เว้นว่างได้"
+                        >
+                    </label>
+
+                    <label>
+                        ศิลปิน
+
+                        <input
+                            name="songArtist"
+                            maxlength="80"
+                            placeholder="เช่น ชื่อศิลปิน"
+                        >
+                    </label>
+
+                    <label class="full">
+                        ลิงก์เพลง (YouTube / Spotify / ...)
+
+                        <input
+                            name="songUrl"
+                            type="url"
+                            placeholder="https://youtu.be/... — เจ้าของบอร์ดแก้เองก็ได้"
+                        >
+                    </label>
+
                     <!-- Form Buttons -->
                     <div class="form-actions full">
 
@@ -497,6 +589,7 @@
     </div>
 
     <!-- Admin JavaScript -->
+    <script src="/song.js"></script>
     <script src="/admin.js"></script>
 
 </body>

@@ -122,22 +122,41 @@
   <div class="profile-overlay" id="profile-overlay" aria-hidden="true">
     <section class="profile-modal" role="dialog" aria-modal="true" aria-labelledby="profile-name">
       <button class="profile-close" id="profile-close" aria-label="Close profile">×</button>
-      <div class="profile-left">
-        <div class="profile-avatar" id="profile-avatar"><span>25</span></div>
+      <!-- เอฟเฟกต์พื้นหลัง ( decorative ) -->
+      <div class="profile-fx" aria-hidden="true">
+        <span class="fx-orb fx-a"></span>
+        <span class="fx-orb fx-b"></span>
+        <span class="fx-scan"></span>
+        <span class="fx-spot"></span>
+        <div class="fx-sparks" id="profile-sparks"></div>
+      </div>
+
+      <!-- ด้านบน: รูปโปรไฟล์ + ชื่อ (จัดกึ่งกลาง) -->
+      <header class="profile-head">
+        <div class="profile-avatar-wrap">
+          <span class="avatar-ring ring-1"></span>
+          <span class="avatar-ring ring-2"></span>
+          <div class="profile-avatar" id="profile-avatar"><span>25</span></div>
+        </div>
         <span class="profile-member-tag" id="profile-role">MEMBER</span>
         <h2 id="profile-name">MEMBER NAME</h2>
         <p class="profile-tagline" id="profile-tagline" hidden></p>
-        <p class="profile-id" id="profile-id">NO. 01 / TWENTYFIVE</p>
-      </div>
-      <div class="profile-right">
         <div class="profile-status"><span class="status-dot"></span><span id="profile-status-text">MEMBER PROFILE</span><small id="profile-group">MEMBERS</small></div>
-        <div class="profile-divider"></div>
+        <p class="profile-id" id="profile-id">NO. 01 / TWENTYFIVE</p>
+      </header>
+
+      <!-- ด้านล่าง: ประวัติ -->
+      <div class="profile-body">
+        <div class="profile-divider"><i></i></div>
         <p class="profile-kicker">// IDENTITY_ARCHIVE_DECRYPTED</p>
-        <div class="profile-data-panel">
-          <span class="profile-watermark">✕</span>
+        <section class="profile-data-panel">
+          <span class="profile-watermark">25</span>
+          <span class="panel-scanline"></span>
           <small>PERSONAL DOSSIER</small>
+          <p class="profile-history">ประวัติ / แนะนำตัว</p>
           <p id="profile-description">TWENTYFIVE COLLECTIVE</p>
-        </div>
+        </section>
+        <div class="profile-song" id="profile-song" hidden></div>
         <div class="profile-footer">
           <p>LOYALTY · RESPECT · UNITY</p>
           <div class="profile-actions" id="profile-actions"></div>
@@ -146,5 +165,7 @@
     </section>
   </div>
 
+  <script src="/song.js"></script>
+  <script src="/music.js"></script>
   <script src="/app.js"></script>
 </body></html>

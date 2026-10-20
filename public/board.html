@@ -119,6 +119,23 @@
                 </label>
               </div>
 
+              <h2 style="margin-top:26px">เพลงประจำบอร์ด</h2>
+              <p class="muted panel-sub">1 เพลงต่อบอร์ด — วางลิงก์ YouTube / Spotify / SoundCloud / Apple Music แล้วระบบจะฝังตัวเล่นให้เอง (ลิงก์อื่นจะแสดงเป็นปุ่มเปิดลิงก์)</p>
+              <div class="two-col">
+                <label class="field">
+                  <span>ชื่อเพลง</span>
+                  <input name="songTitle" maxlength="80" placeholder="เช่น เพลงที่ชอบ">
+                </label>
+                <label class="field">
+                  <span>ศิลปิน</span>
+                  <input name="songArtist" maxlength="80" placeholder="เช่น ชื่อศิลปิน">
+                </label>
+              </div>
+              <label class="field">
+                <span>ลิงก์เพลง</span>
+                <input name="songUrl" type="url" placeholder="https://youtu.be/... หรือ https://open.spotify.com/track/...">
+              </label>
+
               <h2 style="margin-top:26px">ธีมสีบอร์ด</h2>
               <div class="chips" id="theme-chips">
                 <button type="button" class="chip" data-theme="gold"><span class="swatch" style="background:#e6b528"></span>GOLD</button>
@@ -163,6 +180,7 @@
             <p class="preview-tag" id="pv-tagline">TWENTYFIVE</p>
             <span class="preview-status" id="pv-status" hidden><i></i><span></span></span>
             <p class="preview-bio" id="pv-bio">แนะนำตัวของคุณจะแสดงตรงนี้</p>
+            <div id="pv-song" class="preview-song" hidden></div>
             <div class="preview-meta" id="pv-meta"></div>
           </div>
         </aside>
@@ -170,6 +188,8 @@
     </section>
   </main>
 
+  <script src="/song.js"></script>
+  <script src="/music.js"></script>
   <script src="/board.js"></script>
 </body>
 </html>
