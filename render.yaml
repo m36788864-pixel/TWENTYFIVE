@@ -39,6 +39,9 @@ services:
       # ส่งข้อมูลขึ้นชีตอัตโนมัติทุกกี่วินาที แม้ไม่มีการแก้ไข (ให้มีสำเนาอยู่เสมอ กดกู้ได้ทุกเมื่อ)
       - key: SHEETS_KEEPALIVE
         value: "300"
+      # เวลารอ Google ชีตตอบ (วินาที) — Apps Script ตื่นนอนครั้งแรกช้าได้ 20-40 วิ ถ้าสั้นกว่านี้จะขึ้น "This operation was aborted"
+      - key: SHEETS_TIMEOUT
+        value: "60"
       # ลิงก์เชิญเข้ากลุ่มดิสคอร์ดของแก๊ง (ใช้ในข้อความ DM)
       - key: DISCORD_INVITE
         value: https://discord.gg/rZBmUgYtx2

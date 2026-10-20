@@ -720,7 +720,9 @@ function renderSheets(s) {
       "ดูวิธีตั้งค่าในหัวข้อ <b>\"วิธีตั้งค่าให้ส่งข้อมูลเข้า Google ชีต\"</b> ด้านล่าง";
     return;
   }
-  if (s.urlHint) {
+  if (s.urlHint && !s.lastSyncAt) {
+    /* URL ผิดรูปแบบและยังไม่เคยส่งสำเร็จเลย → ให้เห็นสาเหตุทันที
+       แต่ถ้าเคยส่งสำเร็จมาแล้ว แสดงว่าใช้งานได้จริง จึงไม่ขึ้นเตือนนี้ */
     badge.className = "badge rejected";
     badge.innerHTML = "<i></i>URL ผิด";
     msg.innerHTML = `▲ <b>SHEETS_WEBHOOK_URL ตั้งค่าผิดรูปแบบ</b><br>${esc(s.urlHint)}<br>` +

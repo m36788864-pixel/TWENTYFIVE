@@ -50,6 +50,10 @@ const SHEETS_WEBHOOK_URL = (process.env.SHEETS_WEBHOOK_URL || "").trim();
 const SHEETS_SECRET = (process.env.SHEETS_SECRET || "").trim();
 const SHEETS_INTERVAL = Math.max(5, Number(process.env.SHEETS_INTERVAL) || 20) * 1000;
 const SHEETS_KEEPALIVE = Math.max(0, Number(process.env.SHEETS_KEEPALIVE ?? 300) || 0) * 1000;
+/* Apps Script ตื่นนอน (cold start) ครั้งแรกหลังไม่ได้เรียกใช้จะช้ามาก (บางที 20-40 วิ)
+   ถ้า timeout สั้นเกินไปจะได้ "This operation was aborted" ทั้งที่ชีตไม่ได้เป็นอะไร */
+const SHEETS_TIMEOUT = Math.max(10, Number(process.env.SHEETS_TIMEOUT) || 60) * 1000;
+const SHEETS_TIMEOUT_MSG = `Google ชีตตอบช้าเกิน ${Math.round(SHEETS_TIMEOUT / 1000)} วินาที — มักเกิดตอน Apps Script เพิ่งตื่นนอน (เรียกครั้งแรกหลังเว้นช่วง) ไม่ใช่ชีตเสีย ให้รอสักครู่แล้วกดใหม่ หรือตั้ง SHEETS_TIMEOUT ให้มากขึ้น`;
 
 /* เช็กรูปแบบ URL ตั้งแต่ต้นทาง — ถ้าผิด การส่งจะโดน 404 ทุกครั้งโดยไม่รู้สาเหตุ */
 const SHEETS_URL_HINT = (() => {
@@ -453,28 +457,46 @@ function buildSheetPayload(sheet) {
   } finally { sheetBuilding = false; }
 }
 
-async function postToSheet(payload) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 20000);
-  try {
-    const res = await fetch(SHEETS_WEBHOOK_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },   // text/plain เลี่ยงปัญหา preflight ของ Apps Script
-      body: JSON.stringify(payload),
-      redirect: "follow",
-      signal: controller.signal
-    });    const text = await res.text();
-    let data = null;
-    try { data = JSON.parse(text); } catch {}
-    if (!res.ok) {
-      const tip = res.status === 404
-        ? ` — URL ปลายทางไม่มีอยู่จริง ให้ตรวจว่า SHEETS_WEBHOOK_URL ลงท้ายด้วย /exec (ไม่ใช่ /dev) และคัดลอกจาก Deploy → Manage deployments → Web app แล้ว${SHEETS_URL_HINT ? ` · ${SHEETS_URL_HINT}` : ""}`
-        : SHEETS_URL_HINT ? ` — ${SHEETS_URL_HINT}` : "";
-      throw new Error(`Google ชีตตอบกลับ ${res.status}${tip}`);
+/* เรียก Google ชีตด้วยเวลาที่ยาวพอ — Apps Script ตื่นนอนครั้งแรกอาจกินเวลา 20-40 วิ
+   ถ้าโดนตัดกลางคัน (AbortError) จะลองซ้ำอีก 1 ครั้งก่อนยอมแพ้ */
+async function sheetFetch(url, init = {}) {
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), SHEETS_TIMEOUT);
+    let res;
+    try {
+      res = await fetch(url, { ...init, redirect: "follow", signal: controller.signal });
+    } catch (err) {
+      clearTimeout(timer);
+      const aborted = err && err.name === "AbortError";
+      if (!aborted) throw err;                       // ไม่ใช่เรื่อง timeout ให้รายงานผิดจริงไปเลย
+      if (attempt === 2) throw new Error(SHEETS_TIMEOUT_MSG);
+      console.warn(`[sheets] เรียกชีตครั้งที่ ${attempt} ไม่ทันเวลา — รอ 3 วินาทีแล้วลองใหม่ (Apps Script น่าจะกำลังตื่นนอน)`);
+      await new Promise((r) => setTimeout(r, 3000));
+      continue;
     }
-    if (data && data.ok === false) throw new Error(data.error || "Apps Script ปฏิเสธข้อมูล");
-    return data || { ok: true };
-  } finally { clearTimeout(timer); }
+    clearTimeout(timer);
+    return res;
+  }
+}
+
+async function postToSheet(payload) {
+  const res = await sheetFetch(SHEETS_WEBHOOK_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },   // text/plain เลี่ยงปัญหา preflight ของ Apps Script
+    body: JSON.stringify(payload)
+  });
+  const text = await res.text();
+  let data = null;
+  try { data = JSON.parse(text); } catch {}
+  if (!res.ok) {
+    const tip = res.status === 404
+      ? ` — URL ปลายทางไม่มีอยู่จริง ให้ตรวจว่า SHEETS_WEBHOOK_URL ลงท้ายด้วย /exec (ไม่ใช่ /dev) และคัดลอกจาก Deploy → Manage deployments → Web app แล้ว${SHEETS_URL_HINT ? ` · ${SHEETS_URL_HINT}` : ""}`
+      : SHEETS_URL_HINT ? ` — ${SHEETS_URL_HINT}` : "";
+    throw new Error(`Google ชีตตอบกลับ ${res.status}${tip}`);
+  }
+  if (data && data.ok === false) throw new Error(data.error || "Apps Script ปฏิเสธข้อมูล");
+  return data || { ok: true };
 }
 
 /* ดึงข้อมูลดิบที่สำรองไว้บน Google ชีต (สำหรับกู้คืนกลับเข้าระบบ) */
@@ -482,18 +504,14 @@ async function fetchSheetRaw() {
   const url = new URL(SHEETS_WEBHOOK_URL);
   url.searchParams.set("action", "raw");
   if (SHEETS_SECRET) url.searchParams.set("token", SHEETS_SECRET);
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 20000);
-  try {
-    const res = await fetch(url.toString(), { redirect: "follow", signal: controller.signal });
-    const text = await res.text();
-    let data = null;
-    try { data = JSON.parse(text); } catch {}
-    if (!res.ok) throw new Error(`Google ชีตตอบกลับ ${res.status}`);
-    if (!data) throw new Error("อ่านข้อมูลจาก Google ชีตไม่ได้ (ผลลัพธ์ไม่ใช่ JSON)");
-    if (data.ok === false) throw new Error(data.error || "Apps Script ปฏิเสธข้อมูล");
-    return data.items || {};
-  } finally { clearTimeout(timer); }
+  const res = await sheetFetch(url.toString());
+  const text = await res.text();
+  let data = null;
+  try { data = JSON.parse(text); } catch {}
+  if (!res.ok) throw new Error(`Google ชีตตอบกลับ ${res.status}`);
+  if (!data) throw new Error("อ่านข้อมูลจาก Google ชีตไม่ได้ (ผลลัพธ์ไม่ใช่ JSON)");
+  if (data.ok === false) throw new Error(data.error || "Apps Script ปฏิเสธข้อมูล");
+  return data.items || {};
 }
 
 async function sendSheet(sheet) {
