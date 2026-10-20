@@ -51,6 +51,18 @@ const SHEETS_SECRET = (process.env.SHEETS_SECRET || "").trim();
 const SHEETS_INTERVAL = Math.max(5, Number(process.env.SHEETS_INTERVAL) || 20) * 1000;
 const SHEETS_KEEPALIVE = Math.max(0, Number(process.env.SHEETS_KEEPALIVE ?? 300) || 0) * 1000;
 
+/* เช็กรูปแบบ URL ตั้งแต่ต้นทาง — ถ้าผิด การส่งจะโดน 404 ทุกครั้งโดยไม่รู้สาเหตุ */
+const SHEETS_URL_HINT = (() => {
+  if (!SHEETS_WEBHOOK_URL) return "";
+  if (!/^https:\/\/script\.google\.com\/macros\//i.test(SHEETS_WEBHOOK_URL)) {
+    return "SHEETS_WEBHOOK_URL ต้องขึ้นต้นด้วย https://script.google.com/macros/ — ตอนนี้เป็นอย่างอื่น อาจเอา URL ของ Google ชีต (docs.google.com/spreadsheets/...) มาวางแทน URL ของ Apps Script";
+  }
+  if (!/\/exec\/?$/i.test(SHEETS_WEBHOOK_URL)) {
+    return "SHEETS_WEBHOOK_URL ต้องลงท้ายด้วย /exec — ถ้าลงท้ายด้วย /dev ให้ใช้ URL จาก Deploy → Manage deployments → Web app แทน (URL แบบ /dev ใช้ได้ตอนทดสอบใน-editor เท่านั้น)";
+  }
+  return "";
+})();
+
 const DATA_DIR = path.join(__dirname, "data");
 
 if (!ADMIN_PASSWORD || !SESSION_SECRET) {
@@ -61,6 +73,8 @@ if (!DISCORD_BOT_TOKEN) {
 }
 if (!SHEETS_WEBHOOK_URL) {
   console.warn("NOTE: ยังไม่ได้ตั้ง SHEETS_WEBHOOK_URL — ข้อมูลจะไม่ถูกส่งขึ้น Google ชีต");
+} else if (SHEETS_URL_HINT) {
+  console.warn(`IMPORTANT: ${SHEETS_URL_HINT}`);
 }
 fs.mkdirSync(DATA_DIR, { recursive: true });
 const UPLOAD_DIR = path.join(__dirname, "public", "uploads");
@@ -449,11 +463,15 @@ async function postToSheet(payload) {
       body: JSON.stringify(payload),
       redirect: "follow",
       signal: controller.signal
-    });
-    const text = await res.text();
+    });    const text = await res.text();
     let data = null;
     try { data = JSON.parse(text); } catch {}
-    if (!res.ok) throw new Error(`Google ชีตตอบกลับ ${res.status}`);
+    if (!res.ok) {
+      const tip = res.status === 404
+        ? ` — URL ปลายทางไม่มีอยู่จริง ให้ตรวจว่า SHEETS_WEBHOOK_URL ลงท้ายด้วย /exec (ไม่ใช่ /dev) และคัดลอกจาก Deploy → Manage deployments → Web app แล้ว${SHEETS_URL_HINT ? ` · ${SHEETS_URL_HINT}` : ""}`
+        : SHEETS_URL_HINT ? ` — ${SHEETS_URL_HINT}` : "";
+      throw new Error(`Google ชีตตอบกลับ ${res.status}${tip}`);
+    }
     if (data && data.ok === false) throw new Error(data.error || "Apps Script ปฏิเสธข้อมูล");
     return data || { ok: true };
   } finally { clearTimeout(timer); }
@@ -603,6 +621,7 @@ async function applySheetRestore(items, { onlyMissing = false } = {}) {
 function sheetsSummary() {
   return {
     configured: sheetStatus.configured,
+    urlHint: SHEETS_URL_HINT,
     secretSet: sheetStatus.secretSet,
     intervalSec: sheetStatus.intervalSec,
     keepaliveSec: sheetStatus.keepaliveSec,

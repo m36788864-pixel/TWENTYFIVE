@@ -720,6 +720,13 @@ function renderSheets(s) {
       "ดูวิธีตั้งค่าในหัวข้อ <b>\"วิธีตั้งค่าให้ส่งข้อมูลเข้า Google ชีต\"</b> ด้านล่าง";
     return;
   }
+  if (s.urlHint) {
+    badge.className = "badge rejected";
+    badge.innerHTML = "<i></i>URL ผิด";
+    msg.innerHTML = `▲ <b>SHEETS_WEBHOOK_URL ตั้งค่าผิดรูปแบบ</b><br>${esc(s.urlHint)}<br>` +
+      `วิธีเอา URL ที่ถูกต้อง: เปิด Apps Script → <b>Deploy → Manage deployments</b> → ไอคอนดินสอ → Version: New version → Deploy → คัดลอก URL ที่ลงท้ายด้วย <code>/exec</code>`;
+    return;
+  }
   const apps = s.sheets.Applications || {};
   const members = s.sheets.Members || {};
   const errors = [apps.error, members.error].filter(Boolean);
