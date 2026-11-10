@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#040405">
+  <meta name="description" content="TWENTYFIVE — ระบบบริหารจัดการแก๊ง รายงานกิจกรรม คะแนน Leaderboard การลา และความประพฤติ">
+  <title>TWENTYFIVE | GANG SYSTEM</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Orbitron:wght@400;600;700;800;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/gang.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-inner">
+      <a class="brand" href="/">
+        <span class="brand-mark">25</span>
+        <span>TWENTYFIVE<small>GANG MANAGEMENT</small></span>
+      </a>
+      <nav class="top-links">
+        <a href="/">หน้าแรก</a>
+        <a href="/board">บอร์ดของฉัน</a>
+        <a href="/gang" class="is-active keep">ระบบแก๊ง</a>
+        <a href="/admin" class="keep">หลังบ้าน</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- ================= LOGIN ================= -->
+    <section id="login-view" hidden>
+      <div class="login-wrap">
+        <div class="login-hero">
+          <p class="eyebrow"><span>TWENTYFIVE</span> // GANG OPERATIONS</p>
+          <h1>บริหารแก๊ง<br>อย่าง<em>มืออาชีพ</em></h1>
+          <p class="muted">ระบบรายงานกิจกรรม คะแนน ความประพฤติ การลา และอันดับคนขยัน สำหรับสมาชิก TWENTYFIVE ทุกคน — ใช้บัญชีที่ได้รับอนุมัติจากเว็บไซต์แล้วเท่านั้น</p>
+          <div class="login-features">
+            <div class="login-feature"><b>ACTIVITY REPORT</b><span>ส่งรายงานพร้อมหลักฐานให้แอดมินตรวจ</span></div>
+            <div class="login-feature"><b>LEADERBOARD</b><span>จัดอันดับคนขยันแบบเรียลไทม์</span></div>
+            <div class="login-feature"><b>MY RECORD</b><span>ดูประวัติคะแนน การลา และการเตือน</span></div>
+            <div class="login-feature"><b>LEAVE SYSTEM</b><span>ขอลาและติดตามสถานะได้ทันที</span></div>
+          </div>
+        </div>
+
+        <div class="login-card">
+          <div class="login-tabs">
+            <button type="button" data-login-tab="member" class="active">สมาชิก</button>
+            <button type="button" data-login-tab="admin">แอดมิน</button>
+          </div>
+
+          <form id="member-login-form">
+            <h2>เข้าสู่ระบบสมาชิก</h2>
+            <p class="panel-sub">ใช้ชื่อ IC และรหัสผ่านที่ได้รับจากแอดมินทาง DM ดิสคอร์ด</p>
+            <label class="field"><span>ชื่อ IC</span><input name="name" maxlength="80" autocomplete="username" required placeholder="ชื่อที่ใช้ในแก๊ง"></label>
+            <label class="field"><span>รหัสผ่าน</span><input name="password" type="password" autocomplete="current-password" required placeholder="รหัสผ่านจากแอดมิน"></label>
+            <div class="btn-row">
+              <button class="btn primary" type="submit">เข้าสู่ระบบ ↗</button>
+              <span id="member-login-msg" class="message"></span>
+            </div>
+            <p class="hint" style="margin-top:16px">ยังไม่มีบัญชี? <a href="/apply" style="color:var(--gold-strong)">สมัครเข้าแก๊งก่อน</a> แล้วรอแอดมินอนุมัติ</p>
+          </form>
+
+          <form id="admin-login-form" hidden>
+            <h2>เข้าสู่ระบบแอดมิน</h2>
+            <p class="panel-sub">สำหรับหัวหน้าแก๊งและผู้ดูแลระบบหลังบ้าน</p>
+            <label class="field"><span>ชื่อผู้ใช้</span><input name="username" autocomplete="username" required placeholder="admin"></label>
+            <label class="field"><span>รหัสผ่าน</span><input name="password" type="password" autocomplete="current-password" required placeholder="รหัสผ่านแอดมิน"></label>
+            <div class="btn-row">
+              <button class="btn primary" type="submit">เข้าสู่ระบบ ↗</button>
+              <span id="admin-login-msg" class="message"></span>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= APP ================= -->
+    <section id="app-view" hidden>
+      <div class="app-head">
+        <div>
+          <p class="eyebrow"><span>TWENTYFIVE</span> // <span id="view-eyebrow">DASHBOARD</span></p>
+          <h1>สวัสดี <em id="head-name">MEMBER</em></h1>
+          <p class="muted" id="head-sub">ภาพรวมผลงานและความประพฤติของคุณ</p>
+        </div>
+        <div class="user-card">
+          <div class="user-avatar" id="user-avatar">25</div>
+          <div class="user-meta">
+            <b id="user-name">MEMBER</b>
+            <span><span id="user-role" class="role-badge member">MEMBER</span></span>
+          </div>
+          <div class="user-points"><b id="user-points">0</b><small>POINTS</small></div>
+          <button class="btn ghost sm" id="logout-btn" type="button" title="ออกจากระบบ">ออก</button>
+        </div>
+      </div>
+
+      <nav class="app-nav" id="app-nav">
+        <button type="button" data-view="dashboard" class="active">DASHBOARD</button>
+        <button type="button" data-view="report">ส่งรายงาน</button>
+        <button type="button" data-view="leaderboard">LEADERBOARD</button>
+        <button type="button" data-view="leave">ระบบลา</button>
+        <button type="button" data-view="record">MY RECORD</button>
+        <button type="button" data-view="admin" id="nav-admin" hidden>ADMIN <span class="nav-count" id="admin-count" hidden>0</span></button>
+      </nav>
+
+      <!-- ---------- DASHBOARD ---------- -->
+      <div class="view" id="view-dashboard">
+        <section class="panel dash-hero pad-lg">
+          <div>
+            <p class="eyebrow">WELCOME BACK // <span>OPERATIVE</span></p>
+            <h2>สวัสดี <em id="dash-name">MEMBER</em></h2>
+            <div class="hero-role">
+              <span id="dash-role-badge" class="role-badge member">MEMBER</span>
+              <span class="badge" id="dash-status-badge">ACTIVE</span>
+            </div>
+            <div class="hero-points"><b id="dash-points">0</b><small>คะแนนสะสมทั้งหมด</small></div>
+          </div>
+          <div class="rank-badge"><div><b id="dash-rank">#--</b><small>อันดับคนขยัน</small></div></div>
+        </section>
+
+        <div class="stat-grid" id="dash-stats"></div>
+
+        <div class="grid-main">
+          <section class="panel">
+            <div class="panel-head">
+              <div><h2>กิจกรรมล่าสุดของฉัน</h2><p class="panel-sub" style="margin:4px 0 0">รายงานที่ส่งและผลการตรวจสอบ</p></div>
+              <button type="button" class="btn ghost sm" data-goto="report">ส่งรายงาน +</button>
+            </div>
+            <div class="list" id="dash-recent"><div class="empty">ยังไม่มีรายงานกิจกรรม</div></div>
+          </section>
+
+          <aside class="stack">
+            <section class="panel">
+              <h2>ทางลัด</h2>
+              <p class="panel-sub">เข้าถึงเมนูสำคัญได้ทันที</p>
+              <div class="stack-sm">
+                <button type="button" class="btn primary" data-goto="report">ส่งรายงานกิจกรรม</button>
+                <button type="button" class="btn" data-goto="leaderboard">ดู Leaderboard</button>
+                <button type="button" class="btn" data-goto="leave">ขอลา / ติดตามสถานะ</button>
+                <button type="button" class="btn ghost" data-goto="record">ตรวจสอบ MY RECORD</button>
+              </div>
+            </section>
+            <section class="panel">
+              <h2>สถานะการลาล่าสุด</h2>
+              <p class="panel-sub">ติดตามคำขอที่ยังรออนุมัติ</p>
+              <div id="dash-leave" class="list"><div class="empty">ยังไม่มีคำขอลา</div></div>
+            </section>
+          </aside>
+        </div>
+
+        <section class="panel" id="dash-admin-panel" hidden style="margin-top:18px">
+          <div class="panel-head">
+            <div><h2>ภาพรวมแก๊ง</h2><p class="panel-sub" style="margin:4px 0 0">ข้อมูลสำหรับผู้ดูแล</p></div>
+            <button type="button" class="btn ghost sm" data-goto="admin">เปิด ADMIN DASHBOARD</button>
+          </div>
+          <div class="stat-grid" style="margin-top:0" id="dash-admin-stats"></div>
+          <div class="table-wrap">
+            <table class="data">
+              <thead><tr><th>อันดับ</th><th>สมาชิก</th><th>คะแนน</th><th>กิจกรรมที่ผ่าน</th></tr></thead>
+              <tbody id="dash-admin-top"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- ---------- ACTIVITY REPORT ---------- -->
+      <div class="view" id="view-report" hidden>
+        <div class="split">
+          <section class="panel pad-lg">
+            <div class="panel-head">
+              <div><h2>ส่งรายงานกิจกรรม</h2><p class="panel-sub" style="margin:4px 0 0">เลือกสมาชิกจากรายชื่อที่สมัครผ่านเว็บไซต์เท่านั้น — ระบบผูก Member ID ให้อัตโนมัติ</p></div>
+            </div>
+            <form id="report-form">
+              <label class="field" id="report-member-filter-wrap">
+                <span>ค้นหาชื่อสมาชิก <span class="opt">Dropdown</span></span>
+                <input id="report-member-filter" type="search" placeholder="พิมพ์ชื่อเพื่อค้นหา..." autocomplete="off">
+              </label>
+              <label class="field">
+                <span>สมาชิก <b>*</b></span>
+                <select id="report-member" name="memberId" required></select>
+              </label>
+
+              <label class="field">
+                <span>ประเภทกิจกรรม <b>*</b></span>
+                <div class="type-cards" id="report-types">
+                  <button type="button" class="type-card active" data-type="shop"><span class="tc-icon">🏪</span><b>เล่นร้าน</b><small>SHOP</small></button>
+                  <button type="button" class="type-card" data-type="loop"><span class="tc-icon">🔁</span><b>เล่นลูป</b><small>LOOP</small></button>
+                  <button type="button" class="type-card" data-type="airdrop"><span class="tc-icon">📦</span><b>เล่นแอร์ดอป</b><small>AIRDROP</small></button>
+                </div>
+              </label>
+
+              <label class="field">
+                <span>ผลลัพธ์กิจกรรม <b>*</b></span>
+                <div class="segmented" id="report-results">
+                  <button type="button" class="active" data-result="won">ได้ / ชนะ<small>WIN</small></button>
+                  <button type="button" data-result="lost">ไม่ได้ / แพ้<small>LOSE</small></button>
+                </div>
+              </label>
+
+              <div class="field">
+                <span style="color:#c9c9d1;font-size:12.5px">รูปภาพหลักฐาน <b style="color:var(--gold)" id="proof-required">*</b></span>
+                <div class="upload-zone">
+                  <input type="file" id="report-proof" accept="image/png,image/jpeg,image/webp,image/gif">
+                  <div class="uz-title">คลิกเพื่ออัปโหลดหลักฐาน</div>
+                  <div class="uz-sub" id="proof-hint">ต้องแนบหลักฐานการงัดร้านเมื่อได้ร้าน</div>
+                </div>
+                <div class="upload-preview" id="proof-preview"><img alt="หลักฐาน"><button type="button" id="proof-clear">×</button></div>
+              </div>
+
+              <label class="field">
+                <span>หมายเหตุเพิ่มเติม <span class="opt">ไม่บังคับ</span></span>
+                <textarea name="note" maxlength="400" placeholder="เช่น ชื่อร้าน / รายละเอียดกิจกรรม"></textarea>
+              </label>
+
+              <div class="btn-row">
+                <button class="btn primary" type="submit" id="report-submit">ส่งรายงาน ↗</button>
+                <span id="report-msg" class="message"></span>
+              </div>
+              <p class="hint">เมื่อส่งแล้ว รายงานจะอยู่ในสถานะ “รอตรวจสอบ” และแอดมินจะแจ้งผลผ่านระบบ + Discord</p>
+            </form>
+          </section>
+
+          <aside class="panel">
+            <div class="panel-head">
+              <div><h2>รายงานของฉัน</h2><p class="panel-sub" style="margin:4px 0 0">สถานะล่าสุดของคุณ</p></div>
+            </div>
+            <div class="list scroll-y" id="my-reports"><div class="empty">ยังไม่มีรายงาน</div></div>
+          </aside>
+        </div>
+      </div>
+
+      <!-- ---------- LEADERBOARD ---------- -->
+      <div class="view" id="view-leaderboard" hidden>
+        <section class="panel pad-lg">
+          <div class="panel-head">
+            <div><h2>Leaderboard — คนขยัน</h2><p class="panel-sub" style="margin:4px 0 0">จัดอันดับจากคะแนนสะสมและผลงานกิจกรรม อัปเดตแบบเรียลไทม์</p></div>
+            <span class="badge gold" id="lb-updated"><i></i>LIVE</span>
+          </div>
+          <div class="toolbar">
+            <label class="field grow"><span>ค้นหาสมาชิก</span><input id="lb-search" type="search" placeholder="พิมพ์ชื่อสมาชิก..." autocomplete="off"></label>
+            <label class="field"><span>ช่วงเวลา</span>
+              <select id="lb-range">
+                <option value="all">ทั้งหมด</option>
+                <option value="7">7 วันล่าสุด</option>
+                <option value="30">30 วันล่าสุด</option>
+                <option value="90">90 วันล่าสุด</option>
+                <option value="custom">กำหนดเอง</option>
+              </select>
+            </label>
+            <label class="field hidden" id="lb-from-wrap"><span>จากวันที่</span><input id="lb-from" type="date"></label>
+            <label class="field hidden" id="lb-to-wrap"><span>ถึงวันที่</span><input id="lb-to" type="date"></label>
+            <button type="button" class="btn sm" id="lb-refresh">รีเฟรช</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data">
+              <thead>
+                <tr><th>อันดับ</th><th>สมาชิก</th><th>คะแนน</th><th>ส่งกิจกรรม</th><th>ผ่าน</th><th>ชนะ</th><th>อัตราผ่าน</th></tr>
+              </thead>
+              <tbody id="lb-body"><tr><td colspan="7"><div class="empty">กำลังโหลด...</div></td></tr></tbody>
+            </table>
+          </div>
+          <p class="hint" style="margin-top:12px">คะแนนจะถูกนับตามช่วงเวลาที่เลือก — เลือก “ทั้งหมด” เพื่อดูคะแนนสะสมจริง</p>
+        </section>
+      </div>
+
+      <!-- ---------- LEAVE ---------- -->
+      <div class="view" id="view-leave" hidden>
+        <div class="split">
+          <section class="panel pad-lg">
+            <div class="panel-head">
+              <div><h2>ส่งคำขอลา</h2><p class="panel-sub" style="margin:4px 0 0">เลือกช่วงวันที่และระบุเหตุผล — แอดมินจะตรวจสอบและแจ้งผล</p></div>
+            </div>
+            <form id="leave-form">
+              <div class="grid-2">
+                <label class="field"><span>วันที่เริ่มลา <b>*</b></span><input type="date" name="startDate" required></label>
+                <label class="field"><span>วันที่สิ้นสุด <b>*</b></span><input type="date" name="endDate" required></label>
+              </div>
+              <label class="field"><span>ประเภทการลา <b>*</b></span>
+                <select name="type" id="leave-type" required></select>
+              </label>
+              <label class="field"><span>เหตุผลในการลา <b>*</b></span><textarea name="reason" maxlength="400" required placeholder="ระบุเหตุผลให้ชัดเจน"></textarea></label>
+              <div class="btn-row">
+                <button class="btn primary" type="submit">ส่งคำขอลา ↗</button>
+                <span id="leave-msg" class="message"></span>
+              </div>
+            </form>
+          </section>
+
+          <aside class="panel">
+            <div class="panel-head">
+              <div><h2 id="leave-list-title">ประวัติการลาของฉัน</h2><p class="panel-sub" style="margin:4px 0 0" id="leave-list-sub">ติดตามสถานะคำขอทั้งหมด</p></div>
+            </div>
+            <div class="list scroll-y" id="leave-list"><div class="empty">ยังไม่มีคำขอลา</div></div>
+          </aside>
+        </div>
+      </div>
+
+      <!-- ---------- MY RECORD ---------- -->
+      <div class="view" id="view-record" hidden>
+        <section class="panel pad-lg" style="margin-bottom:18px">
+          <div class="panel-head">
+            <div><h2>MY RECORD — ความประพฤติของฉัน</h2><p class="panel-sub" style="margin:4px 0 0" id="record-sub">ประวัติคะแนน การลา การเตือน และกิจกรรมของคุณ</p></div>
+            <span class="role-badge member" id="record-role">MEMBER</span>
+          </div>
+          <div class="record-summary" id="record-summary"></div>
+          <div class="subtabs" id="record-tabs">
+            <button type="button" data-record-tab="scores" class="active">ประวัติคะแนน</button>
+            <button type="button" data-record-tab="leaves">ประวัติการลา</button>
+            <button type="button" data-record-tab="warnings">ประวัติการเตือน</button>
+            <button type="button" data-record-tab="activity">ประวัติกิจกรรม</button>
+          </div>
+          <div id="record-body"><div class="empty">กำลังโหลด...</div></div>
+        </section>
+      </div>
+
+      <!-- ---------- ADMIN ---------- -->
+      <div class="view" id="view-admin" hidden>
+        <div class="stat-grid" id="admin-stats"></div>
+
+        <div class="admin-subnav" id="admin-subnav">
+          <button type="button" data-pane="reports" class="active">รายงานกิจกรรม</button>
+          <button type="button" data-pane="members">จัดการสมาชิก</button>
+          <button type="button" data-pane="behavior">ความประพฤติ</button>
+          <button type="button" data-pane="audit">Audit Log</button>
+          <button type="button" data-pane="settings">ตั้งค่าระบบ</button>
+        </div>
+
+        <!-- reports -->
+        <div class="admin-pane active" id="pane-reports">
+          <section class="panel pad-lg">
+            <div class="panel-head">
+              <div><h2>ตรวจสอบรายงานกิจกรรม</h2><p class="panel-sub" style="margin:4px 0 0">เปิดดูหลักฐาน กำหนดผลและคะแนน แล้วอนุมัติหรือปฏิเสธ</p></div>
+              <span class="badge warn" id="pending-report-badge"><i></i>0 รอตรวจ</span>
+            </div>
+            <div class="toolbar">
+              <label class="field grow"><span>ค้นหาชื่อสมาชิก</span><input id="admin-report-search" type="search" placeholder="พิมพ์ชื่อ..." autocomplete="off"></label>
+              <label class="field"><span>สถานะ</span>
+                <select id="admin-report-status">
+                  <option value="pending">รอตรวจสอบ</option>
+                  <option value="approved">อนุมัติแล้ว</option>
+                  <option value="rejected">ปฏิเสธ</option>
+                  <option value="completed">ดำเนินการเรียบร้อย</option>
+                  <option value="">ทั้งหมด</option>
+                </select>
+              </label>
+              <label class="field"><span>ประเภท</span>
+                <select id="admin-report-type">
+                  <option value="">ทั้งหมด</option>
+                  <option value="shop">เล่นร้าน</option>
+                  <option value="loop">เล่นลูป</option>
+                  <option value="airdrop">เล่นแอร์ดอป</option>
+                </select>
+              </label>
+              <label class="field"><span>จากวันที่</span><input id="admin-report-from" type="date"></label>
+              <label class="field"><span>ถึงวันที่</span><input id="admin-report-to" type="date"></label>
+              <button class="btn sm" type="button" id="admin-report-refresh">ค้นหา</button>
+            </div>
+            <div id="admin-report-list"><div class="empty">กำลังโหลด...</div></div>
+            <div class="pagination" id="admin-report-pagination" hidden>
+              <button class="btn sm ghost" type="button" id="admin-report-prev">← ก่อนหน้า</button>
+              <span id="admin-report-page">หน้า 1 / 1</span>
+              <button class="btn sm ghost" type="button" id="admin-report-next">ถัดไป →</button>
+            </div>
+          </section>
+        </div>
+
+        <!-- members -->
+        <div class="admin-pane" id="pane-members">
+          <section class="panel pad-lg">
+            <div class="panel-head">
+              <div><h2>จัดการสมาชิกและสิทธิ์</h2><p class="panel-sub" style="margin:4px 0 0">รายชื่อทั้งหมดดึงจากฐานข้อมูลผู้สมัครที่ได้รับอนุมัติแล้วเท่านั้น</p></div>
+              <span class="badge gold" id="member-count-badge"><i></i>0 MEMBERS</span>
+            </div>
+            <div class="toolbar">
+              <label class="field grow"><span>ค้นหาสมาชิก</span><input id="admin-member-search" type="search" placeholder="พิมพ์ชื่อ / Member ID..." autocomplete="off"></label>
+            </div>
+            <div class="table-wrap">
+              <table class="data">
+                <thead><tr><th>สมาชิก</th><th>ตำแหน่ง</th><th>คะแนน</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+                <tbody id="admin-member-body"><tr><td colspan="5"><div class="empty">กำลังโหลด...</div></td></tr></tbody>
+              </table>
+            </div>
+            <p class="hint" style="margin-top:12px" id="role-hint">เฉพาะ Leader เท่านั้นที่เปลี่ยนตำแหน่งและสิทธิ์ได้</p>
+          </section>
+        </div>
+
+        <!-- behavior -->
+        <div class="admin-pane" id="pane-behavior">
+          <div class="split">
+            <section class="panel pad-lg">
+              <div class="panel-head">
+                <div><h2>บันทึกความประพฤติ / การเตือน</h2><p class="panel-sub" style="margin:4px 0 0">ทุกการเตือนจะบันทึกใน MY RECORD ของสมาชิกและแจ้ง Discord</p></div>
+              </div>
+              <form id="behavior-form">
+                <label class="field"><span>สมาชิก <b>*</b></span><select id="behavior-member" required></select></label>
+                <label class="field"><span>ประเภท</span>
+                  <div class="segmented" id="behavior-kind">
+                    <button type="button" class="active" data-kind="warning">แจ้งเตือน</button>
+                    <button type="button" data-kind="note">บันทึกทั่วไป</button>
+                  </div>
+                </label>
+                <label class="field"><span>หัวข้อ</span><input name="title" maxlength="120" placeholder="เช่น มาสาย / ไม่ส่งรายงาน"></label>
+                <label class="field"><span>รายละเอียด / เหตุผล <b>*</b></span><textarea name="detail" maxlength="500" required placeholder="อธิบายสิ่งที่เกิดขึ้นและสิ่งที่ควรปรับปรุง"></textarea></label>
+                <div class="btn-row"><button class="btn primary" type="submit">บันทึกความประพฤติ ↗</button><span id="behavior-msg" class="message"></span></div>
+              </form>
+            </section>
+            <aside class="panel">
+              <div class="panel-head"><div><h2>รายการล่าสุด</h2><p class="panel-sub" style="margin:4px 0 0">ประวัติการเตือนทั้งแก๊ง</p></div></div>
+              <div class="list scroll-y" id="behavior-list"><div class="empty">ยังไม่มีรายการ</div></div>
+            </aside>
+          </div>
+        </div>
+
+        <!-- audit -->
+        <div class="admin-pane" id="pane-audit">
+          <section class="panel pad-lg">
+            <div class="panel-head">
+              <div><h2>Audit Log</h2><p class="panel-sub" style="margin:4px 0 0">ประวัติการดำเนินการของผู้ดูแลทุกคน</p></div>
+              <span class="badge info"><i></i>ตรวจสอบได้</span>
+            </div>
+            <div class="toolbar">
+              <label class="field grow"><span>ค้นหา</span><input id="audit-search" type="search" placeholder="ผู้ดำเนินการ / การกระทำ / สมาชิก..." autocomplete="off"></label>
+              <button class="btn sm" type="button" id="audit-refresh">ค้นหา</button>
+            </div>
+            <div class="list scroll-y" id="audit-list"><div class="empty">กำลังโหลด...</div></div>
+          </section>
+        </div>
+
+        <!-- settings -->
+        <div class="admin-pane" id="pane-settings">
+          <div class="stack">
+            <section class="panel pad-lg">
+              <div class="panel-head">
+                <div><h2>ตั้งค่าคะแนนกิจกรรม</h2><p class="panel-sub" style="margin:4px 0 0">กำหนดคะแนนเองแยกตามประเภทและผลลัพธ์ — ระบบไม่กำหนดตายตัว</p></div>
+                <button class="btn primary sm" type="button" id="settings-save-points">บันทึกคะแนน</button>
+              </div>
+              <div class="settings-grid" id="points-settings"></div>
+              <p class="message" id="points-msg" style="margin-top:12px"></p>
+            </section>
+
+            <section class="panel pad-lg">
+              <div class="panel-head">
+                <div><h2>Discord Webhook</h2><p class="panel-sub" style="margin:4px 0 0">เก็บ URL ไว้ฝั่ง Backend เท่านั้น — หน้าเว็บจะแสดงเฉพาะแบบปิดบัง</p></div>
+                <span class="badge" id="webhook-badge"><i></i>ตรวจสอบ</span>
+              </div>
+              <div class="grid-2">
+                <label class="field"><span>Webhook URL ใหม่ <span class="opt">เว้นว่าง = ไม่เปลี่ยน</span></span><input id="webhook-url" type="password" autocomplete="off" placeholder="https://discord.com/api/webhooks/..."></label>
+                <label class="field"><span>สถานะปัจจุบัน</span><input id="webhook-preview" readonly value="ยังไม่ได้ตั้งค่า"></label>
+              </div>
+              <div class="btn-row">
+                <button class="btn primary sm" type="button" id="webhook-save">บันทึก Webhook</button>
+                <button class="btn sm" type="button" id="webhook-test">ทดสอบส่งข้อความ</button>
+                <button class="btn bad sm" type="button" id="webhook-clear">ลบ Webhook</button>
+                <span class="message" id="webhook-msg"></span>
+              </div>
+            </section>
+
+            <section class="panel pad-lg">
+              <div class="panel-head">
+                <div><h2>Google Sheets</h2><p class="panel-sub" style="margin:4px 0 0">ข้อมูลหลักคือเว็บไซต์ — ชีตเป็นรายงานและสำรองข้อมูล</p></div>
+                <span class="badge" id="sheets-badge"><i></i>SHEET</span>
+              </div>
+              <div class="stat-grid" id="sheets-stats" style="margin-top:0"></div>
+              <div class="btn-row">
+                <button class="btn primary sm" type="button" id="sheets-sync">ส่งข้อมูลขึ้นชีตเดี๋ยวนี้</button>
+                <span class="message" id="sheets-msg"></span>
+              </div>
+              <p class="hint" id="sheets-hint" style="margin-top:12px"></p>
+            </section>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toasts"></div>
+
+  <!-- generic modal -->
+  <div class="modal" id="modal" hidden>
+    <div class="modal-box" id="modal-box">
+      <button class="modal-close" type="button" id="modal-close">×</button>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <script src="/gang.js"></script>
+</body>
+</html>
