@@ -49,6 +49,7 @@ button{font-family:inherit;cursor:pointer}
 .eyebrow{font:9px Orbitron,monospace;letter-spacing:.3em;color:var(--muted);text-transform:uppercase}
 .eyebrow b,.eyebrow span{color:var(--gold)}
 .muted{color:var(--muted);font-size:13px;line-height:1.7}
+[hidden]{display:none !important}
 .hidden{display:none !important}
 .empty{padding:26px;text-align:center;color:var(--muted);font-size:13px;border:1px dashed var(--line);border-radius:1rem}
 
