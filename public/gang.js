@@ -17,7 +17,7 @@
     adminPane: "reports",
     recordTab: "scores",
     recordMemberId: null,
-    report: { type: "shop", result: "won", proofUrl: "", memberId: "" },
+    report: { type: "shop", result: "won", proofUrl: "", memberId: "", participantIds: [] },
     behaviorKind: "warning",
     reportPage: 1,
     reportPages: 1,
@@ -59,6 +59,35 @@
   const todayStr = () => {
     const d = new Date();
     return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  };
+  const timeAgo = (v) => {
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return "";
+    const diff = Date.now() - d.getTime();
+    if (diff < 0) return "";
+    const min = Math.floor(diff / 60000);
+    if (min < 1) return "เมื่อสักครู่";
+    if (min < 60) return `${min} นาทีที่แล้ว`;
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return `${hr} ชั่วโมงที่แล้ว`;
+    const day = Math.floor(hr / 24);
+    if (day < 30) return `${day} วันที่แล้ว`;
+    return fmtDate(v);
+  };
+  const timeTag = (v) => {
+    if (!v) return "-";
+    const ago = timeAgo(v);
+    return `<span title="${esc(fmtDateTime(v))}">${esc(fmtDateTime(v))}${ago ? ` <span class="time-ago">· ${esc(ago)}</span>` : ""}</span>`;
+  };
+  const reportParticipantsOf = (r) => {
+    const list = Array.isArray(r && r.participants) ? r.participants.filter((p) => p && (p.id !== undefined && p.id !== null)) : [];
+    if (!list.length && r && r.memberId) return [{ id: r.memberId, name: r.memberName || "" }];
+    if (r && !list.some((p) => String(p.id) === String(r.memberId))) list.unshift({ id: r.memberId, name: r.memberName || "" });
+    return list;
+  };
+  const participantLine = (r) => {
+    const list = reportParticipantsOf(r);
+    return list.length > 1 ? list.map((p) => p.name).filter(Boolean).join(", ") : "";
   };
   const dateOffset = (days) => {
     const d = new Date();
@@ -167,7 +196,9 @@
       state.meta = session.meta || {};
       state.pointsCfg = session.points || {};
       /* รีเซ็ตสถานะที่ผูกกับผู้ใช้คนก่อน — กันการล็อกเอาต์แล้วสลับบัญชีในแท็บเดิม */
-      state.report = { ...state.report, memberId: session.actor.memberId ? String(session.actor.memberId) : "", proofUrl: "" };
+      state.report = { ...state.report, memberId: session.actor.memberId ? String(session.actor.memberId) : "", participantIds: [], proofUrl: "" };
+      const proofUrlInput = $("#report-proof-url");
+      if (proofUrlInput) proofUrlInput.value = "";
       state.records = null;
       state.currentReports = [];
       state.reportPage = 1;
@@ -242,6 +273,41 @@
     if (!state.perms.canViewAll) {
       select.disabled = true;
       $("#report-member-filter-wrap").hidden = true;
+    }
+    renderParticipantUI();
+  }
+
+  function renderParticipantUI() {
+    const ownerId = String($("#report-member")?.value || state.report.memberId || "");
+    const owner = state.members.find((m) => String(m.id) === ownerId);
+    const seen = new Set(ownerId ? [ownerId] : []);
+    state.report.participantIds = (state.report.participantIds || [])
+      .map(String)
+      .filter((id) => {
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return state.members.some((m) => String(m.id) === id);
+      });
+    const chips = $("#participant-chips");
+    if (chips) {
+      const parts = [];
+      if (owner) parts.push(`<span class="participant-chip owner">👑 ${esc(owner.name)} <small style="font-weight:400;opacity:.75">เจ้าของ</small></span>`);
+      state.report.participantIds.forEach((id) => {
+        const m = state.members.find((x) => String(x.id) === String(id));
+        if (!m) return;
+        parts.push(`<span class="participant-chip">${esc(m.name)}<button type="button" data-remove-participant="${esc(m.id)}" aria-label="ลบ ${esc(m.name)}">×</button></span>`);
+      });
+      chips.innerHTML = parts.join("") || '<span class="participant-empty">ยังไม่ได้เลือกผู้ร่วมเล่น — เลือกจากรายการด้านล่าง</span>';
+    }
+    const picker = $("#participant-select");
+    if (picker) {
+      const selected = new Set(state.report.participantIds.map(String));
+      const options = state.members.filter((m) => String(m.id) !== ownerId && !selected.has(String(m.id)));
+      picker.innerHTML = `<option value="">+ เพิ่มผู้ร่วมเล่น (${options.length} คน)</option>` + options.map((m) =>
+        `<option value="${esc(m.id)}">${esc(m.name)} · ${esc(m.roleLabel || "Member")}</option>`
+      ).join("");
+      picker.disabled = options.length === 0;
+      picker.value = "";
     }
   }
 
@@ -407,7 +473,7 @@
       <div class="row-icon">${ACTIVITY_ICON[r.type] || "🎯"}</div>
       <div class="row-main">
         <div class="row-title">${esc(activityLabel(r.type))} · ${esc(resultLabel(r.result))} ${statusBadge(r.status)}</div>
-        <div class="row-sub">${showMember ? `<b style="color:#d8d8de">${esc(r.memberName)}</b> · ` : ""}${fmtDateTime(r.createdAt)}${r.reviewedByName ? ` · ตรวจโดย ${esc(r.reviewedByName)}` : ""}</div>
+        <div class="row-sub">${showMember ? `<b style="color:#d8d8de">${esc(r.memberName)}</b> · ` : ""}${timeTag(r.createdAt)}${r.reviewedByName ? ` · ตรวจโดย ${esc(r.reviewedByName)}` : ""}</div>
       </div>
       <div class="row-side"><span class="${pointCls}">${r.points ? signed(r.points) : "0"}</span><small style="font-size:9px;color:var(--muted)">POINTS</small></div>
     </div>`;
@@ -451,7 +517,8 @@
       ${thumb}
       <div class="row-main">
         <div class="row-title">${esc(activityLabel(r.type))} · ${esc(resultLabel(r.result))} ${statusBadge(r.status)}</div>
-        <div class="row-sub">${esc(r.memberName)} · ${fmtDateTime(r.createdAt)} · ${r.points ? `${signed(r.points)} คะแนน` : "ยังไม่ให้คะแนน"}</div>
+        <div class="row-sub">${esc(r.memberName)} · ${timeTag(r.createdAt)} · ${r.points ? `${signed(r.points)} คะแนน` : "ยังไม่ให้คะแนน"}</div>
+        ${participantLine(r) ? `<div class="row-sub">ผู้ร่วมเล่น: ${esc(participantLine(r))}</div>` : ""}
         ${r.note ? `<div class="row-sub">หมายเหตุ: ${esc(r.note)}</div>` : ""}
         ${r.reviewNote ? `<div class="review-note">${esc(r.reviewNote)}${r.reviewedByName ? ` — ${esc(r.reviewedByName)}` : ""}</div>` : ""}
       </div>
@@ -483,6 +550,8 @@
       const dataUrl = await compressImage(file);
       const result = await api("/api/upload", { method: "POST", body: JSON.stringify({ data: dataUrl }) });
       state.report.proofUrl = result.url;
+      const urlInput = $("#report-proof-url");
+      if (urlInput) urlInput.value = result.url;
       const preview = $("#proof-preview");
       preview.style.display = "block";
       preview.querySelector("img").src = result.url;
@@ -490,6 +559,25 @@
     } catch (err) {
       setMsg(msg, err.message, false);
     }
+  }
+
+  function applyProofUrl(value) {
+    const msg = $("#report-msg");
+    const raw = String(value || "").trim();
+    if (!raw) {
+      state.report.proofUrl = "";
+      $("#proof-preview").style.display = "none";
+      return;
+    }
+    if (!/^https?:\/\//i.test(raw)) {
+      setMsg(msg, "ลิงก์รูปภาพต้องขึ้นต้นด้วย http:// หรือ https://", false);
+      return;
+    }
+    state.report.proofUrl = raw;
+    const preview = $("#proof-preview");
+    preview.style.display = "block";
+    preview.querySelector("img").src = raw;
+    setMsg(msg, "", true);
   }
 
   function compressImage(file) {
@@ -540,14 +628,18 @@
           type,
           result,
           proofUrl: state.report.proofUrl,
+          participantIds: state.report.participantIds.slice(),
           note: new FormData(form).get("note") || "",
           requestId: (crypto.randomUUID && crypto.randomUUID()) || `req-${Date.now()}`
         })
       });
       state.report.proofUrl = "";
+      state.report.participantIds = [];
       $("#proof-preview").style.display = "none";
       $("#report-proof").value = "";
+      $("#report-proof-url").value = "";
       form.elements.note.value = "";
+      renderParticipantUI();
       setMsg(msg, "ส่งรายงานสำเร็จ — รอแอดมินตรวจสอบ", true);
       toast("ส่งรายงานสำเร็จ", "รายงานอยู่ในสถานะรอตรวจสอบ", "✅");
       await loadReportView();
@@ -630,7 +722,7 @@
       <div class="row-icon">🗓️</div>
       <div class="row-main">
         <div class="row-title">${esc(l.memberName)} · ${esc(leaveTypeLabel(l.type))} ${leaveBadge(l.status)}</div>
-        <div class="row-sub">${fmtDate(l.startDate)} → ${fmtDate(l.endDate)} · ส่งเมื่อ ${fmtDateTime(l.createdAt)}</div>
+        <div class="row-sub">${fmtDate(l.startDate)} → ${fmtDate(l.endDate)} · ส่งเมื่อ ${timeTag(l.createdAt)}</div>
         <div class="row-sub">เหตุผล: ${esc(l.reason)}</div>
         ${l.reviewNote ? `<div class="review-note">${esc(l.reviewNote)}${l.reviewedByName ? ` — ${esc(l.reviewedByName)}` : ""}</div>` : ""}
       </div>
@@ -718,7 +810,7 @@
             <div class="row-main">
               <div class="row-title"><span class="${pointsClass(s.delta)}">${signed(s.delta)} คะแนน</span> <span class="badge">${s.source === "report" ? "จากรายงาน" : s.delta > 0 ? "เพิ่มคะแนน" : "หักคะแนน"}</span></div>
               <div class="row-sub">${esc(s.reason)}</div>
-              <div class="row-sub">${fmtDateTime(s.createdAt)} · โดย ${esc(s.actorName || "-")}</div>
+              <div class="row-sub">${timeTag(s.createdAt)} · โดย ${esc(s.actorName || "-")}</div>
             </div>
           </div>`).join("")}</div>`
         : '<div class="empty">ยังไม่มีประวัติคะแนน</div>';
@@ -728,7 +820,7 @@
             <div class="row-icon">🗓️</div>
             <div class="row-main">
               <div class="row-title">${esc(leaveTypeLabel(l.type))} ${leaveBadge(l.status)}</div>
-              <div class="row-sub">${fmtDate(l.startDate)} → ${fmtDate(l.endDate)} · ส่งเมื่อ ${fmtDateTime(l.createdAt)}</div>
+              <div class="row-sub">${fmtDate(l.startDate)} → ${fmtDate(l.endDate)} · ส่งเมื่อ ${timeTag(l.createdAt)}</div>
               <div class="row-sub">${esc(l.reason)}</div>
               ${l.reviewNote ? `<div class="review-note">${esc(l.reviewNote)}${l.reviewedByName ? ` — ${esc(l.reviewedByName)}` : ""}</div>` : ""}
             </div>
@@ -741,7 +833,7 @@
             <div class="row-main">
               <div class="row-title">${esc(w.title || (w.kind === "warning" ? "แจ้งเตือน" : "บันทึก"))} <span class="badge ${w.kind === "warning" ? "warn" : ""}">${w.kind === "warning" ? "เตือน" : "บันทึก"}</span></div>
               <div class="row-sub">${esc(w.detail)}</div>
-              <div class="row-sub">${fmtDateTime(w.createdAt)} · โดย ${esc(w.actorName || "-")}</div>
+              <div class="row-sub">${timeTag(w.createdAt)} · โดย ${esc(w.actorName || "-")}</div>
             </div>
           </div>`).join("")}</div>`
         : '<div class="empty">ไม่มีประวัติการเตือน</div>';
@@ -839,9 +931,10 @@
           <span>กิจกรรม <b>${esc(activityLabel(r.type))}</b></span>
           <span>ผล <b>${esc(resultLabel(r.result))}</b></span>
           <span>คะแนน <b>${esc(r.points)}</b></span>
-          <span>ส่ง <b>${fmtDateTime(r.createdAt)}</b></span>
+          <span>ส่ง <b>${timeTag(r.createdAt)}</b></span>
           ${r.reviewedByName ? `<span>ตรวจโดย <b>${esc(r.reviewedByName)}</b></span>` : ""}
         </div>
+        ${participantLine(r) ? `<div class="row-sub" style="margin-top:7px">ผู้ร่วมเล่น: <b style="color:#d8d8de">${esc(participantLine(r))}</b> · ให้คะแนนทุกคน</div>` : ""}
         ${r.note ? `<div class="row-sub" style="margin-top:7px">หมายเหตุ: ${esc(r.note)}</div>` : ""}
         ${r.reviewNote ? `<div class="review-note">${esc(r.reviewNote)}</div>` : ""}
       </div>
@@ -858,15 +951,16 @@
     const content = openModal(`
       <h2>อนุมัติรายงานกิจกรรม</h2>
       <p class="modal-sub">${esc(report.memberName)} · ${esc(activityLabel(report.type))} · ส่งเมื่อ ${fmtDateTime(report.createdAt)}</p>
+      ${participantLine(report) ? `<div class="notice gold" style="margin-bottom:16px"><span>ผู้ร่วมเล่น: <b>${esc(participantLine(report))}</b> — คะแนนด้านล่างจะถูกให้ทุกคนในรายการ</span></div>` : ""}
       ${report.proofUrl ? `<img class="modal-img" src="${esc(report.proofUrl)}" alt="หลักฐาน" style="margin-bottom:18px">` : '<div class="notice gold" style="margin-bottom:16px">รายงานนี้ไม่มีรูปหลักฐาน (ไม่ได้ร้าน)</div>'}
       <div class="grid-2">
         <label class="field"><span>ผลลัพธ์ <b>*</b></span>
           <select id="review-result">${results.map((r) => `<option value="${esc(r.value)}" ${r.value === report.result ? "selected" : ""}>${esc(r.label)}</option>`).join("")}</select>
         </label>
-        <label class="field"><span>คะแนนที่ได้รับ <b>*</b></span><input id="review-points" type="number" min="0" step="1" value="${defaultPoints(report.type, report.result)}"></label>
+        <label class="field"><span>คะแนนที่ได้รับ (ต่อคน) <b>*</b></span><input id="review-points" type="number" min="0" step="1" value="${defaultPoints(report.type, report.result)}"></label>
       </div>
       <label class="field"><span>หมายเหตุ / เหตุผล <span class="opt">ไม่บังคับ</span></span><textarea id="review-reason" maxlength="300" placeholder="เช่น หลักฐานครบถ้วน"></textarea></label>
-      <p class="hint">ระบบจะให้คะแนนครั้งเดียวต่อรายงาน — ป้องกันการคิดคะแนนซ้ำ</p>
+      <p class="hint">ระบบจะให้คะแนนครั้งเดียวต่อคนต่อรายงาน — ป้องกันการคิดคะแนนซ้ำ</p>
       <div class="modal-actions"><button class="btn ghost" type="button" data-close>ยกเลิก</button><button class="btn ok" type="button" id="review-save">ยืนยันอนุมัติ</button></div>
     `, true);
     content.querySelector("[data-close]").addEventListener("click", closeModal);
@@ -985,7 +1079,7 @@
             <div class="row-main">
               <div class="row-title">${esc(b.memberName)} · ${esc(b.title)} <span class="badge ${b.kind === "warning" ? "warn" : ""}">${b.kind === "warning" ? "เตือน" : "บันทึก"}</span></div>
               <div class="row-sub">${esc(b.detail)}</div>
-              <div class="row-sub">${fmtDateTime(b.createdAt)} · โดย ${esc(b.actorName)}</div>
+              <div class="row-sub">${timeTag(b.createdAt)} · โดย ${esc(b.actorName)}</div>
             </div>
             <div class="row-side"><button class="btn ghost sm" data-behavior-delete="${esc(b.id)}">ลบ</button></div>
           </div>`).join("")
@@ -1029,7 +1123,7 @@
             <div class="row-main">
               <div class="row-title">${esc(a.actorName)} · <span style="color:var(--gold-strong)">${esc(a.action)}</span> ${a.targetName ? `→ ${esc(a.targetName)}` : ""}</div>
               <div class="row-sub">${esc(a.detail || "-")}</div>
-              <div class="row-sub">${fmtDateTime(a.createdAt)} · ${esc(a.actorRole)}</div>
+              <div class="row-sub">${timeTag(a.createdAt)} · ${esc(a.actorRole)}</div>
             </div>
           </div>`).join("")
         : '<div class="empty">ไม่พบประวัติ</div>';
@@ -1049,6 +1143,25 @@
       const badge = $("#webhook-badge");
       badge.className = "badge " + (webhook.configured ? "ok" : "bad");
       badge.innerHTML = `<i></i>${webhook.configured ? "CONNECTED" : "NOT SET"}`;
+      const webhook2 = cfg.webhook2 || {};
+      const w2Preview = $("#webhook2-preview");
+      if (w2Preview) w2Preview.value = webhook2.configured ? `${webhook2.preview} (${webhook2.source === "env" ? "จาก env" : "ตั้งในเว็บ"})` : "ยังไม่ได้ตั้งค่า — ใช้ Webhook หลัก";
+      const cycle = cfg.cycle || {};
+      const cycleStats = $("#cycle-stats");
+      if (cycleStats) {
+        cycleStats.innerHTML = [
+          statCard("รอบปัจจุบัน", cycle.label || "-", cycle.month || "", "gold"),
+          statCard("เริ่มนับคะแนน", cycle.startsAt ? fmtDate(cycle.startsAt) : "-", "เวลาไทย", ""),
+          statCard("สรุปรอบล่าสุด", cycle.lastCycle ? (cycle.lastCycle.label || "-") : "ยังไม่มี", cycle.lastCycle ? (cycle.lastCycle.sent ? "ส่ง Discord แล้ว" : "ยังส่งไม่สำเร็จ") : "", cycle.lastCycle && cycle.lastCycle.sent ? "ok" : "warn")
+        ].join("");
+      }
+      const cycleLast = $("#cycle-last");
+      if (cycleLast) {
+        const top = (cycle.lastCycle && Array.isArray(cycle.lastCycle.top)) ? cycle.lastCycle.top.slice(0, 5) : [];
+        cycleLast.innerHTML = top.length
+          ? top.map((r) => `<div class="cycle-top"><b>#${esc(r.rank)}</b><span style="color:#e2e2e8;margin-left:0">${esc(r.name)}</span><span>${num(r.points)} คะแนน · ผ่าน ${num(r.approved)} งาน</span></div>`).join("")
+          : '<div class="empty">ยังไม่มีสรุปอันดับรายเดือน — ระบบจะสรุปและส่ง Discord อัตโนมัติเมื่อขึ้นเดือนใหม่</div>';
+      }
       const sheets = cfg.sheets || {};
       const sBadge = $("#sheets-badge");
       sBadge.className = "badge " + (sheets.configured ? (sheets.lastError ? "warn" : "ok") : "bad");
@@ -1097,17 +1210,25 @@
     }
   }
 
-  async function saveWebhook(clear) {
-    const msg = $("#webhook-msg");
+  async function saveWebhook(target, clear) {
+    const second = target === "webhook2";
+    const msg = second ? $("#webhook2-msg") : $("#webhook-msg");
+    const input = second ? $("#webhook2-url") : $("#webhook-url");
     try {
-      const body = clear ? { clearWebhook: true } : { webhookUrl: $("#webhook-url").value.trim() };
-      if (!clear && !body.webhookUrl) return setMsg(msg, "กรุณากรอก Webhook URL", false);
+      const value = input ? input.value.trim() : "";
+      const body = clear
+        ? (second ? { clearWebhook2: true } : { clearWebhook: true })
+        : (second ? { webhookUrl2: value } : { webhookUrl: value });
+      if (!clear && !value) return setMsg(msg, "กรุณากรอก Webhook URL", false);
       const res = await api("/api/gang/admin/config", { method: "PUT", body: JSON.stringify(body) });
+      if (input) input.value = "";
       const webhook = res.webhook || {};
-      $("#webhook-url").value = "";
+      const webhook2 = res.webhook2 || {};
       $("#webhook-preview").value = webhook.configured ? `${webhook.preview} (${webhook.source === "env" ? "จาก env" : "ตั้งในเว็บ"})` : "ยังไม่ได้ตั้งค่า";
       $("#webhook-badge").className = "badge " + (webhook.configured ? "ok" : "bad");
       $("#webhook-badge").innerHTML = `<i></i>${webhook.configured ? "CONNECTED" : "NOT SET"}`;
+      const p2 = $("#webhook2-preview");
+      if (p2) p2.value = webhook2.configured ? `${webhook2.preview} (${webhook2.source === "env" ? "จาก env" : "ตั้งในเว็บ"})` : "ยังไม่ได้ตั้งค่า — ใช้ Webhook หลัก";
       setMsg(msg, clear ? "ลบ Webhook แล้ว" : "บันทึก Webhook แล้ว", true);
     } catch (err) {
       setMsg(msg, err.message, false);
@@ -1148,22 +1269,6 @@
       await boot();
     } catch (err) { setMsg(msg, err.message, false); }
   });
-  $("#admin-login-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const form = e.target;
-    const msg = $("#admin-login-msg");
-    setMsg(msg, "กำลังเข้าสู่ระบบ...", true);
-    try {
-      await api("/api/login", { method: "POST", body: JSON.stringify(Object.fromEntries(new FormData(form).entries())) });
-      await boot();
-    } catch (err) { setMsg(msg, err.message, false); }
-  });
-  $$(".login-tabs button").forEach((btn) => btn.addEventListener("click", () => {
-    $$(".login-tabs button").forEach((b) => b.classList.toggle("active", b === btn));
-    const isMember = btn.dataset.loginTab === "member";
-    $("#member-login-form").hidden = !isMember;
-    $("#admin-login-form").hidden = isMember;
-  }));
 
   $("#logout-btn").addEventListener("click", async () => {
     try { await api("/api/gang/logout", { method: "POST", body: JSON.stringify({}) }); } catch { /* ignore */ }
@@ -1187,12 +1292,31 @@
     updateReportFormUI();
   }));
   $("#report-member-filter").addEventListener("input", debounce((e) => fillReportMembers(e.target.value), 150));
-  $("#report-member").addEventListener("change", (e) => { state.report.memberId = e.target.value; });
+  $("#report-member").addEventListener("change", (e) => { state.report.memberId = e.target.value; renderParticipantUI(); });
+  $("#participant-select").addEventListener("change", (e) => {
+    const id = e.target.value;
+    if (!id) return;
+    if (!state.report.participantIds.some((x) => String(x) === String(id))) state.report.participantIds.push(String(id));
+    renderParticipantUI();
+  });
+  $("#participant-chips").addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-remove-participant]");
+    if (!btn) return;
+    state.report.participantIds = state.report.participantIds.filter((id) => String(id) !== String(btn.dataset.removeParticipant));
+    renderParticipantUI();
+  });
   $("#report-proof").addEventListener("change", (e) => handleProofUpload(e.target.files[0]));
+  $("#report-proof-url").addEventListener("change", (e) => applyProofUrl(e.target.value));
+  $("#report-proof-url").addEventListener("input", debounce((e) => {
+    const value = e.target.value.trim();
+    if (!value || /^https?:\/\//i.test(value)) applyProofUrl(value);
+  }, 500));
   $("#proof-clear").addEventListener("click", () => {
     state.report.proofUrl = "";
     $("#proof-preview").style.display = "none";
     $("#report-proof").value = "";
+    $("#report-proof-url").value = "";
+    setMsg($("#report-msg"), "", true);
   });
   $("#report-form").addEventListener("submit", submitReport);
 
@@ -1300,9 +1424,11 @@
   $("#audit-search").addEventListener("input", debounce(loadAudit, 300));
   $("#audit-refresh").addEventListener("click", loadAudit);
   $("#settings-save-points").addEventListener("click", savePoints);
-  $("#webhook-save").addEventListener("click", () => saveWebhook(false));
-  $("#webhook-clear").addEventListener("click", () => { if (confirm("ลบ Discord Webhook ที่ตั้งไว้?")) saveWebhook(true); });
+  $("#webhook-save").addEventListener("click", () => saveWebhook("webhook", false));
+  $("#webhook-clear").addEventListener("click", () => { if (confirm("ลบ Discord Webhook หลักที่ตั้งไว้?")) saveWebhook("webhook", true); });
   $("#webhook-test").addEventListener("click", testWebhook);
+  $("#webhook2-save").addEventListener("click", () => saveWebhook("webhook2", false));
+  $("#webhook2-clear").addEventListener("click", () => { if (confirm("ลบ Discord Webhook 2 ที่ตั้งไว้?")) saveWebhook("webhook2", true); });
   $("#sheets-sync").addEventListener("click", syncSheets);
 
   updateReportFormUI();

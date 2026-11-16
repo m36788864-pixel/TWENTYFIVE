@@ -22,6 +22,7 @@
         <a href="/">หน้าแรก</a>
         <a href="/apply" class="is-active">สมัครเข้าแก๊ง</a>
         <a href="/board">บอร์ดของฉัน</a>
+        <a href="#admin-login">แอดมิน</a>
       </nav>
     </div>
   </header>
@@ -117,6 +118,46 @@
       </form>
       <p id="status-msg" class="message" style="margin-top:14px"></p>
       <div id="status-result" hidden></div>
+    </section>
+
+    <!-- ADMIN LOGIN -->
+    <section class="panel" id="admin-login">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <div>
+          <h2>ADMIN <em style="font-style:normal;color:var(--acc)">LOGIN</em></h2>
+          <p class="muted panel-sub" style="margin:6px 0 0">สำหรับหัวหน้าแก๊งและผู้ดูแลหลังบ้าน — เข้าสู่ระบบครั้งเดียวเพื่อใช้ทั้ง ADMIN CONSOLE และ GANG SYSTEM</p>
+        </div>
+        <span class="badge" id="admin-session-badge" hidden><i></i>ACTIVE SESSION</span>
+      </div>
+
+      <form id="admin-login-form" style="margin-top:18px">
+        <div class="two-col">
+          <label class="field">
+            <span>ชื่อผู้ใช้แอดมิน</span>
+            <input name="username" autocomplete="username" required value="admin" placeholder="admin">
+          </label>
+          <label class="field">
+            <span>รหัสผ่านแอดมิน</span>
+            <input name="password" type="password" autocomplete="current-password" required placeholder="รหัสผ่านแอดมิน">
+          </label>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" type="submit" id="admin-login-submit">เข้าสู่ระบบแอดมิน ↗</button>
+          <span id="admin-login-msg" class="message"></span>
+        </div>
+      </form>
+
+      <div id="admin-logged" hidden>
+        <div class="notice-box ok" style="margin-top:6px">
+          <b>เข้าสู่ระบบแอดมินอยู่แล้ว</b>
+          <span>คุณสามารถเปิดหลังบ้านหรือระบบแก๊งได้ทันที</span>
+        </div>
+        <div class="btn-row" style="margin-top:14px">
+          <a class="btn primary" href="/admin">เปิด ADMIN CONSOLE ↗</a>
+          <a class="btn" href="/gang">เปิด GANG SYSTEM ↗</a>
+          <button class="btn ghost" type="button" id="admin-logout">ออกจากระบบแอดมิน</button>
+        </div>
+      </div>
     </section>
   </main>
 

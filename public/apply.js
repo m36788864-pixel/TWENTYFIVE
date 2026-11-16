@@ -97,3 +97,67 @@ $("#status-form").addEventListener("submit", async (e) => {
     out.textContent = err.message;
   }
 });
+
+/* ---------- แอดมินเข้าสู่ระบบ (ย้ายมาจากหน้า /gang) ---------- */
+const adminForm = $("#admin-login-form");
+const adminMsg = $("#admin-login-msg");
+
+function setAdminMsg(text, ok) {
+  adminMsg.textContent = text || "";
+  adminMsg.className = "message" + (text ? (ok ? " ok" : " bad") : "");
+}
+
+function setAdminSession(active) {
+  adminForm.hidden = active;
+  $("#admin-logged").hidden = !active;
+  $("#admin-session-badge").hidden = !active;
+}
+
+async function checkAdminSession() {
+  try {
+    const res = await fetch("/api/session", { headers: { "Content-Type": "application/json" } });
+    const data = await res.json().catch(() => ({}));
+    setAdminSession(!!data.authenticated);
+  } catch { setAdminSession(false); }
+}
+
+adminForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const button = $("#admin-login-submit");
+  const body = Object.fromEntries(new FormData(adminForm).entries());
+  button.disabled = true;
+  setAdminMsg("กำลังเข้าสู่ระบบ...", true);
+  try {
+    const res = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw Error(data.error || "เข้าสู่ระบบไม่สำเร็จ");
+    setAdminMsg("เข้าสู่ระบบสำเร็จ — กำลังพาไปหลังบ้าน...", true);
+    window.location.href = "/admin";
+  } catch (err) {
+    setAdminMsg(err.message, false);
+    button.disabled = false;
+  }
+});
+
+$("#admin-logout").addEventListener("click", async () => {
+  try {
+    await fetch("/api/logout", { method: "POST", headers: { "Content-Type": "application/json" } });
+  } catch { /* ignore */ }
+  setAdminSession(false);
+  setAdminMsg("ออกจากระบบแอดมินแล้ว", true);
+});
+
+if (location.hash === "#admin-login") {
+  setTimeout(() => {
+    const panel = $("#admin-login");
+    if (panel) panel.scrollIntoView({ behavior: "smooth", block: "center" });
+    const input = adminForm.querySelector('input[name="username"]');
+    if (input && !adminForm.hidden) setTimeout(() => input.focus(), 350);
+  }, 120);
+}
+
+checkAdminSession();

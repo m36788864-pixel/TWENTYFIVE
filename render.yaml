@@ -23,6 +23,9 @@ services:
       # Webhook แจ้งเตือนระบบแก๊ง (ไม่บังคับ) — ถ้าไม่ใส่ ตั้งในหน้า /gang → Admin → ตั้งค่าระบบได้
       - key: DISCORD_WEBHOOK_URL
         sync: false
+      # Webhook ที่ 2 สำหรับสรุปอันดับคนขยันรายเดือน (ไม่บังคับ — ถ้าไม่ใส่จะใช้ Webhook หลัก)
+      - key: DISCORD_WEBHOOK_URL_2
+        sync: false
       # สำรองข้อมูลขึ้น GitHub (เข้ารหัส) — จำเป็นถ้าใช้ Render ฟรี ที่ดิสก์ถูกล้างทุกครั้งที่ deploy/restart
       - key: BACKUP_KEY
         sync: false

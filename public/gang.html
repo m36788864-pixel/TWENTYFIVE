@@ -45,11 +45,6 @@
         </div>
 
         <div class="login-card">
-          <div class="login-tabs">
-            <button type="button" data-login-tab="member" class="active">สมาชิก</button>
-            <button type="button" data-login-tab="admin">แอดมิน</button>
-          </div>
-
           <form id="member-login-form">
             <h2>เข้าสู่ระบบสมาชิก</h2>
             <p class="panel-sub">ใช้ชื่อ IC และรหัสผ่านที่ได้รับจากแอดมินทาง DM ดิสคอร์ด</p>
@@ -60,17 +55,7 @@
               <span id="member-login-msg" class="message"></span>
             </div>
             <p class="hint" style="margin-top:16px">ยังไม่มีบัญชี? <a href="/apply" style="color:var(--gold-strong)">สมัครเข้าแก๊งก่อน</a> แล้วรอแอดมินอนุมัติ</p>
-          </form>
-
-          <form id="admin-login-form" hidden>
-            <h2>เข้าสู่ระบบแอดมิน</h2>
-            <p class="panel-sub">สำหรับหัวหน้าแก๊งและผู้ดูแลระบบหลังบ้าน</p>
-            <label class="field"><span>ชื่อผู้ใช้</span><input name="username" autocomplete="username" required placeholder="admin"></label>
-            <label class="field"><span>รหัสผ่าน</span><input name="password" type="password" autocomplete="current-password" required placeholder="รหัสผ่านแอดมิน"></label>
-            <div class="btn-row">
-              <button class="btn primary" type="submit">เข้าสู่ระบบ ↗</button>
-              <span id="admin-login-msg" class="message"></span>
-            </div>
+            <p class="hint" style="margin-top:8px">สำหรับแอดมิน/หัวหน้าแก๊ง <a href="/apply#admin-login" style="color:var(--gold-strong)">เข้าสู่ระบบที่หน้าสมัคร ↗</a></p>
           </form>
         </div>
       </div>
@@ -177,9 +162,18 @@
                 <input id="report-member-filter" type="search" placeholder="พิมพ์ชื่อเพื่อค้นหา..." autocomplete="off">
               </label>
               <label class="field">
-                <span>สมาชิก <b>*</b></span>
+                <span>สมาชิกเจ้าของรายงาน <b>*</b></span>
                 <select id="report-member" name="memberId" required></select>
               </label>
+
+              <div class="field" id="report-participants-wrap">
+                <span>ผู้ร่วมเล่น <span class="opt">เลือกได้หลายคน · ไม่บังคับ</span></span>
+                <div class="participant-box">
+                  <div class="participant-chips" id="participant-chips"></div>
+                  <select id="participant-select" aria-label="เพิ่มผู้ร่วมเล่น"></select>
+                </div>
+                <small class="hint" style="margin-top:6px;display:block">เจ้าของรายงานถูกนับเป็นผู้ร่วมเล่นอัตโนมัติ — เมื่ออนุมัติ คะแนนจะถูกให้ทุกคนในรายการ</small>
+              </div>
 
               <label class="field">
                 <span>ประเภทกิจกรรม <b>*</b></span>
@@ -206,6 +200,10 @@
                   <div class="uz-sub" id="proof-hint">ต้องแนบหลักฐานการงัดร้านเมื่อได้ร้าน</div>
                 </div>
                 <div class="upload-preview" id="proof-preview"><img alt="หลักฐาน"><button type="button" id="proof-clear">×</button></div>
+                <label class="field" style="margin-top:10px">
+                  <span>หรือวางลิงก์รูปภาพ (URL) <span class="opt">ใช้แทนการอัปโหลดได้</span></span>
+                  <input id="report-proof-url" type="url" inputmode="url" autocomplete="off" placeholder="https://cdn.discordapp.com/attachments/.../proof.png">
+                </label>
               </div>
 
               <label class="field">
@@ -445,15 +443,34 @@
                 <span class="badge" id="webhook-badge"><i></i>ตรวจสอบ</span>
               </div>
               <div class="grid-2">
-                <label class="field"><span>Webhook URL ใหม่ <span class="opt">เว้นว่าง = ไม่เปลี่ยน</span></span><input id="webhook-url" type="password" autocomplete="off" placeholder="https://discord.com/api/webhooks/..."></label>
-                <label class="field"><span>สถานะปัจจุบัน</span><input id="webhook-preview" readonly value="ยังไม่ได้ตั้งค่า"></label>
+                <label class="field"><span>Webhook หลัก — แจ้งเตือนกิจกรรม <span class="opt">เว้นว่าง = ไม่เปลี่ยน</span></span><input id="webhook-url" type="password" autocomplete="off" placeholder="https://discord.com/api/webhooks/..."></label>
+                <label class="field"><span>สถานะ Webhook หลัก</span><input id="webhook-preview" readonly value="ยังไม่ได้ตั้งค่า"></label>
               </div>
-              <div class="btn-row">
+              <div class="btn-row" style="margin-bottom:18px">
                 <button class="btn primary sm" type="button" id="webhook-save">บันทึก Webhook</button>
                 <button class="btn sm" type="button" id="webhook-test">ทดสอบส่งข้อความ</button>
-                <button class="btn bad sm" type="button" id="webhook-clear">ลบ Webhook</button>
+                <button class="btn bad sm" type="button" id="webhook-clear">ลบ Webhook หลัก</button>
                 <span class="message" id="webhook-msg"></span>
               </div>
+              <div class="grid-2" style="padding-top:16px;border-top:1px solid var(--line)">
+                <label class="field"><span>Webhook 2 — สรุปอันดับรายเดือน <span class="opt">เว้นว่าง = ไม่เปลี่ยน</span></span><input id="webhook2-url" type="password" autocomplete="off" placeholder="https://discord.com/api/webhooks/..."></label>
+                <label class="field"><span>สถานะ Webhook 2</span><input id="webhook2-preview" readonly value="ยังไม่ได้ตั้งค่า"></label>
+              </div>
+              <div class="btn-row">
+                <button class="btn primary sm" type="button" id="webhook2-save">บันทึก Webhook 2</button>
+                <button class="btn bad sm" type="button" id="webhook2-clear">ลบ Webhook 2</button>
+                <span class="message" id="webhook2-msg"></span>
+              </div>
+              <p class="hint" style="margin-top:12px">ถ้าไม่ได้ตั้ง Webhook 2 ระบบจะส่งสรุปอันดับรายเดือนไปที่ Webhook หลักแทน</p>
+            </section>
+
+            <section class="panel pad-lg">
+              <div class="panel-head">
+                <div><h2>รอบคะแนนรายเดือน</h2><p class="panel-sub" style="margin:4px 0 0">ตัดยอดอันดับทุกต้นเดือน (เวลาไทย) อัตโนมัติ — ประวัติคะแนนเดิมยังอยู่ครบ</p></div>
+                <span class="badge gold" id="cycle-badge"><i></i>REPORT</span>
+              </div>
+              <div class="stat-grid" id="cycle-stats" style="margin-top:0"></div>
+              <div class="list" id="cycle-last" style="margin-top:14px"></div>
             </section>
 
             <section class="panel pad-lg">

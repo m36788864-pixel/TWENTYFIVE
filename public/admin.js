@@ -9,9 +9,7 @@
 
 /* ---------- 1. ELEMENTS & HELPERS ---------- */
 const $ = (sel) => document.querySelector(sel);
-const loginPanel = $("#login-panel");
 const dashboard = $("#dashboard");
-const loginForm = $("#login-form");
 const memberForm = $("#member-form");
 const photoInput = memberForm.elements.photo;
 const photoPreview = $("#photo-preview");
@@ -22,11 +20,9 @@ const esc = (v) => String(v || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 async function api(url, options = {}) {
   const r = await fetch(url, { ...options, headers: { "Content-Type": "application/json", ...(options.headers || {}) } });
   const data = await r.json().catch(() => ({}));
-  // Session lost (server restart / expired) — return to login panel with a clear message
+  // Session lost (server restart / expired) — send admin back to the shared login on /apply
   if (r.status === 401 && url !== "/api/login") {
-    showLogin();
-    const msg = $("#login-msg");
-    if (msg) msg.textContent = "เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่อีกครั้ง";
+    redirectToLogin();
   }
   if (!r.ok) throw Error(data.error || "เกิดข้อผิดพลาด");
   return data;
@@ -52,30 +48,19 @@ function showPhotoPreview(src) {
 }
 
 /* ---------- 2. AUTH ---------- */
-function showDashboard() { loginPanel.hidden = true; dashboard.hidden = false; refresh(); }
-function showLogin() { loginPanel.hidden = false; dashboard.hidden = true; }
+function showDashboard() { dashboard.hidden = false; refresh(); }
+function redirectToLogin() { window.location.replace("/apply#admin-login"); }
 
 async function checkSession() {
   try {
     const d = await api("/api/session");
-    d.authenticated ? showDashboard() : showLogin();
-  } catch { showLogin(); }
+    d.authenticated ? showDashboard() : redirectToLogin();
+  } catch { redirectToLogin(); }
 }
 
-loginForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  $("#login-msg").textContent = "กำลังตรวจสอบ...";
-  const fd = new FormData(loginForm);
-  try {
-    await api("/api/login", { method: "POST", body: JSON.stringify({ username: fd.get("username"), password: fd.get("password") }) });
-    $("#login-msg").textContent = "";
-    showDashboard();
-  } catch (err) { $("#login-msg").textContent = err.message; }
-});
-
 $("#logout").addEventListener("click", async () => {
-  await api("/api/logout", { method: "POST" });
-  showLogin();
+  try { await api("/api/logout", { method: "POST" }); } catch { /* ignore */ }
+  redirectToLogin();
 });
 
 /* ---------- 3. MEMBER FORM ---------- */

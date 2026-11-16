@@ -49,7 +49,7 @@ const SHEETS = {
     "ชื่อผู้ใช้บอร์ด", "รหัสผ่านบอร์ด", "อัปเดตรหัสเมื่อ", "สิทธิ์ระบบแก๊ง", "คะแนนสะสม"
   ],
   "Activity Reports": [
-    "ลำดับ", "รหัส", "Member ID", "ชื่อสมาชิก", "ประเภทกิจกรรม", "ผลลัพธ์", "รูปภาพหลักฐาน",
+    "ลำดับ", "รหัส", "Member ID", "ชื่อสมาชิก", "ผู้ร่วมเล่น", "ประเภทกิจกรรม", "ผลลัพธ์", "รูปภาพหลักฐาน",
     "หมายเหตุสมาชิก", "สถานะ", "คะแนน", "เหตุผลตรวจสอบ", "ผู้ตรวจสอบ", "วันที่ส่ง", "วันที่ตรวจสอบ"
   ],
   "Score History": [
@@ -65,7 +65,7 @@ const SHEETS = {
     "ผู้แจ้ง", "วันที่"
   ],
   Leaderboard: [
-    "อันดับ", "Member ID", "ชื่อสมาชิก", "ตำแหน่ง", "คะแนนสะสม", "กิจกรรมที่ส่ง",
+    "อันดับ", "Member ID", "ชื่อสมาชิก", "ตำแหน่ง", "คะแนนรอบเดือน", "กิจกรรมที่ส่ง",
     "กิจกรรมที่ผ่าน", "จำนวนชัยชนะ", "อัตราผ่าน", "อัปเดตเมื่อ"
   ]
 };
@@ -104,6 +104,10 @@ function upsertPretty(book, name, columns, incoming, remove) {
   };
 
   if (sheet.getLastRow() < 1) {
+    sheet.getRange(1, 1, 1, width).setValues([columns]).setFontWeight("bold").setBackground("#efefef");
+    sheet.setFrozenRows(1);
+  } else {
+    // อัปเดตหัวตารางทุกครั้ง — กันคอลัมน์ใหม่/ชื่อคอลัมน์เปลี่ยนแล้วไม่ตรงกับข้อมูล
     sheet.getRange(1, 1, 1, width).setValues([columns]).setFontWeight("bold").setBackground("#efefef");
     sheet.setFrozenRows(1);
   }

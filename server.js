@@ -99,6 +99,7 @@ const DEFAULT_GANG_POINTS = {
 };
 /* Webhook สำรองจาก env — ถ้าแอดมินตั้งในหน้าเว็บจะใช้ค่านั้นก่อน (เก็บฝั่ง Backend เท่านั้น) */
 const DISCORD_WEBHOOK_URL = (process.env.DISCORD_WEBHOOK_URL || "").trim();
+const DISCORD_WEBHOOK_URL_2 = (process.env.DISCORD_WEBHOOK_URL_2 || "").trim();
 
 const DATA_DIR = path.join(__dirname, "data");
 
@@ -426,7 +427,7 @@ const MEMBER_COLUMNS = [
   "ชื่อผู้ใช้บอร์ด", "รหัสผ่านบอร์ด", "อัปเดตรหัสเมื่อ", "สิทธิ์ระบบแก๊ง", "คะแนนสะสม"
 ];
 const REPORT_COLUMNS = [
-  "ลำดับ", "รหัส", "Member ID", "ชื่อสมาชิก", "ประเภทกิจกรรม", "ผลลัพธ์", "รูปภาพหลักฐาน",
+  "ลำดับ", "รหัส", "Member ID", "ชื่อสมาชิก", "ผู้ร่วมเล่น", "ประเภทกิจกรรม", "ผลลัพธ์", "รูปภาพหลักฐาน",
   "หมายเหตุสมาชิก", "สถานะ", "คะแนน", "เหตุผลตรวจสอบ", "ผู้ตรวจสอบ", "วันที่ส่ง", "วันที่ตรวจสอบ"
 ];
 const SCORE_COLUMNS = [
@@ -442,7 +443,7 @@ const BEHAVIOR_COLUMNS = [
   "ผู้แจ้ง", "วันที่"
 ];
 const LEADERBOARD_COLUMNS = [
-  "อันดับ", "Member ID", "ชื่อสมาชิก", "ตำแหน่ง", "คะแนนสะสม", "กิจกรรมที่ส่ง",
+  "อันดับ", "Member ID", "ชื่อสมาชิก", "ตำแหน่ง", "คะแนนรอบเดือน", "กิจกรรมที่ส่ง",
   "กิจกรรมที่ผ่าน", "จำนวนชัยชนะ", "อัตราผ่าน", "อัปเดตเมื่อ"
 ];
 const APPLICATION_STATUS_TH = { pending: "รอตรวจ", approved: "รับเข้าแก๊ง", rejected: "ไม่ผ่าน" };
@@ -512,7 +513,8 @@ function memberRows(members) {
 }
 function reportRows() {
   return readReports().map((r, i) => [
-    i + 1, r.id, r.memberId, r.memberName, ACTIVITY_LABEL[r.type] || r.type,
+    i + 1, r.id, r.memberId, r.memberName, reportParticipants(r).map((p) => p.name).join(", "),
+    ACTIVITY_LABEL[r.type] || r.type,
     ACTIVITY_RESULT_LABEL[r.result] || r.result || "", r.proofUrl || "", r.note || "",
     REPORT_STATUS_LABEL[r.status] || r.status || "", r.points || 0, r.reviewNote || "",
     r.reviewedByName || "", thDateTime(r.createdAt), thDateTime(r.reviewedAt)
@@ -966,6 +968,12 @@ const boardMember = (m) => {
 };
 const publicMemberList = () => readMembers().filter((m) => !m.exitedAt).map(publicMember);
 const baseUrl = (req) => PUBLIC_URL || `${req.protocol}://${req.get("host")}`;
+function absoluteUrl(req, value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `${baseUrl(req)}${raw.startsWith("/") ? "" : "/"}${raw}`;
+}
 
 /* ============================================================
    3. DISCORD DM — บอทส่งชื่อผู้ใช้/รหัสให้ผู้สมัครทางข้อความส่วนตัว
@@ -1084,7 +1092,7 @@ function applicationReceivedMessage(application) {
 }
 
 /* ส่ง DM ให้ผู้สมัคร: แปลงเป็น User ID ก่อน แล้วเปิดช่อง DM + ส่งข้อความ */
-async function sendDiscordDM(value, content) {
+async function sendDiscordDM(value, content, embed) {
   if (!DISCORD_BOT_TOKEN) return { status: "manual", error: "ยังไม่ได้ตั้งค่า DISCORD_BOT_TOKEN" };
   const who = await resolveDiscordId(value);
   if (!who.id) return { status: "manual", error: DM_FAIL_REASON[who.via] || "ไม่พบ Discord User ID" };
@@ -1097,7 +1105,9 @@ async function sendDiscordDM(value, content) {
       throw new Error(`เปิด DM ไม่สำเร็จ (${channelRes.status}${hint})`);
     }
     const channel = await channelRes.json();
-    const msgRes = await discordFetch(`/channels/${channel.id}/messages`, { method: "POST", body: JSON.stringify({ content }) });
+    const payload = { content };
+    if (embed) payload.embeds = [embed];
+    const msgRes = await discordFetch(`/channels/${channel.id}/messages`, { method: "POST", body: JSON.stringify(payload) });
     if (!msgRes.ok) {
       const hint = msgRes.status === 403 ? " — บอทไม่มีสิทธิ์ส่งข้อความหาผู้ใช้นี้" : msgRes.status === 429 ? " — ส่งถี่เกินไป ลองใหม่ภายหลัง" : "";
       throw new Error(`ส่งข้อความไม่สำเร็จ (${msgRes.status}${hint})`);
@@ -1835,7 +1845,9 @@ const gangAtLeast = (rank) => (req, res, next) => {
 /* ---------- คะแนน ---------- */
 function memberPointMap() {
   const map = new Map();
+  const cutoff = pointsCutoffMs();
   for (const entry of readScores()) {
+    if (cutoff && new Date(entry.createdAt).getTime() < cutoff) continue;
     const key = String(entry.memberId);
     map.set(key, (map.get(key) || 0) + Number(entry.delta || 0));
   }
@@ -1851,6 +1863,10 @@ function cleanPoints(value, fallback = 0) {
 }
 function makeId(prefix) {
   return `${prefix}-${Date.now().toString(36)}-${crypto.randomBytes(3).toString("hex")}`;
+}
+function signedPoints(value) {
+  const n = Number(value || 0);
+  return `${n > 0 ? "+" : ""}${n}`;
 }
 
 /* ---------- ช่วงวันที่ (เวลาไทย) ---------- */
@@ -1893,15 +1909,24 @@ function readGangConfig() {
     id: "gangConfig",
     points,
     webhookUrl: typeof row.webhookUrl === "string" ? row.webhookUrl : "",
+    webhookUrl2: typeof row.webhookUrl2 === "string" ? row.webhookUrl2 : "",
+    cycleMonth: typeof row.cycleMonth === "string" ? row.cycleMonth : "",
+    cycleStartsAt: typeof row.cycleStartsAt === "string" ? row.cycleStartsAt : "",
+    lastCycle: row.lastCycle && typeof row.lastCycle === "object" ? row.lastCycle : null,
     updatedAt: row.updatedAt || ""
   };
 }
-function saveGangConfig({ points, webhookUrl }) {
+function saveGangConfig(patch = {}) {
+  const current = readGangConfig();
   const list = readSettings().filter((s) => !s || s.id !== "gangConfig");
   list.push({
     id: "gangConfig",
-    points,
-    webhookUrl: String(webhookUrl || ""),
+    points: patch.points !== undefined ? patch.points : current.points,
+    webhookUrl: patch.webhookUrl !== undefined ? patch.webhookUrl : current.webhookUrl,
+    webhookUrl2: patch.webhookUrl2 !== undefined ? patch.webhookUrl2 : current.webhookUrl2,
+    cycleMonth: patch.cycleMonth !== undefined ? patch.cycleMonth : current.cycleMonth,
+    cycleStartsAt: patch.cycleStartsAt !== undefined ? patch.cycleStartsAt : current.cycleStartsAt,
+    lastCycle: patch.lastCycle !== undefined ? patch.lastCycle : current.lastCycle,
     updatedAt: new Date().toISOString()
   });
   settingsStore.write(list);
@@ -1910,6 +1935,13 @@ function saveGangConfig({ points, webhookUrl }) {
 function effectiveWebhook() {
   const config = readGangConfig();
   return (config.webhookUrl || DISCORD_WEBHOOK_URL || "").trim();
+}
+function effectiveWebhook2() {
+  const config = readGangConfig();
+  return (config.webhookUrl2 || DISCORD_WEBHOOK_URL_2 || "").trim();
+}
+function validWebhookUrl(url) {
+  return !url || /^https:\/\/(?:discord|discordapp|ptb\.discord|canary\.discord)\.com\/api\/(?:v\d+\/)?webhooks\/\d+\/[\w-]+$/i.test(url);
 }
 function maskWebhook(url) {
   if (!url) return "";
@@ -1932,16 +1964,138 @@ function webhookStatus() {
     preview: maskWebhook(url)
   };
 }
+function webhook2Status() {
+  const config = readGangConfig();
+  const url = (config.webhookUrl2 || DISCORD_WEBHOOK_URL_2 || "").trim();
+  return {
+    configured: !!url,
+    source: config.webhookUrl2 ? "settings" : (DISCORD_WEBHOOK_URL_2 ? "env" : "none"),
+    preview: maskWebhook(url)
+  };
+}
+
+/* ---------- รอบคะแนนรายเดือน (ตัดยอดต้นเดือน เวลาไทย) ---------- */
+function bkkMonthKey(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit" }).formatToParts(date);
+  const year = parts.find((p) => p.type === "year")?.value || "1970";
+  const month = parts.find((p) => p.type === "month")?.value || "01";
+  return `${year}-${month}`;
+}
+function bkkMonthStartIso(date = new Date()) {
+  return new Date(`${bkkMonthKey(date)}-01T00:00:00.000+07:00`).toISOString();
+}
+function bkkMonthLabel(monthKey) {
+  if (!/^\d{4}-\d{2}$/.test(String(monthKey || ""))) return String(monthKey || "");
+  const [year, month] = monthKey.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString("th-TH", { month: "long", year: "numeric", timeZone: "UTC" });
+}
+function pointsCutoffMs() {
+  const config = readGangConfig();
+  const time = new Date(config.cycleStartsAt || 0).getTime();
+  return Number.isFinite(time) ? time : 0;
+}
+function inCurrentCycle(iso) {
+  const time = new Date(iso || 0).getTime();
+  if (Number.isNaN(time)) return true;
+  return time >= pointsCutoffMs();
+}
+async function deliverWebhook(url, embed) {
+  if (!url) return { ok: false, error: "ยังไม่ได้ตั้งค่า Webhook" };
+  let lastError = "";
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: "TWENTYFIVE SYSTEM", embeds: [embed] })
+      });
+      if (res.ok) return { ok: true };
+      lastError = `Discord ตอบกลับ ${res.status}`;
+      if (res.status === 429) {
+        const retryAfter = Number((await res.json().catch(() => ({}))).retry_after || 1);
+        await sleep(Math.min(5000, Math.max(500, retryAfter * 1000)));
+      } else if (res.status >= 500) {
+        await sleep(800 * attempt);
+      } else break;
+    } catch (err) {
+      lastError = String((err && err.message) || err);
+      await sleep(800 * attempt);
+    }
+  }
+  return { ok: false, error: lastError };
+}
+let cycleRunning = false;
+async function ensureMonthlyCycle() {
+  if (cycleRunning) return;
+  cycleRunning = true;
+  try {
+    const config = readGangConfig();
+    const monthKey = bkkMonthKey();
+    const monthStart = bkkMonthStartIso();
+    if (!config.cycleMonth) {
+      saveGangConfig({ cycleMonth: monthKey, cycleStartsAt: monthStart });
+      return;
+    }
+    if (config.cycleMonth === monthKey) return;
+    /* สรุปอันดับของรอบที่เพิ่งจบ ก่อนเริ่มรอบใหม่ */
+    const from = String(config.cycleStartsAt || "").slice(0, 10);
+    const toDate = new Date(new Date(monthStart).getTime() - 1);
+    const to = toDate.toISOString().slice(0, 10);
+    /* เฉพาะคนที่มีผลงานหรือคะแนนในรอบนั้น — ไม่ส่งรายชื่อคนคะแนน 0 เข้า Discord */
+    const rows = computeLeaderboard({ from, to, limit: 1000 })
+      .filter((r) => Number(r.points) !== 0 || Number(r.approved) > 0)
+      .slice(0, 10)
+      .map((r, index) => ({ ...r, rank: index + 1 }));
+    const reportCount = readReports().filter((r) => inDateRange(r.createdAt, from, to)).length;
+    const summary = {
+      month: config.cycleMonth,
+      label: bkkMonthLabel(config.cycleMonth),
+      from,
+      to,
+      top: rows.map((r) => ({ rank: r.rank, memberId: r.memberId, name: r.name, points: r.points, approved: r.approved, wins: r.wins })),
+      reports: reportCount,
+      points: rows.reduce((sum, r) => sum + Number(r.points || 0), 0),
+      generatedAt: new Date().toISOString(),
+      sent: false
+    };
+    const embed = discordEmbed({
+      title: `🏆 สรุปอันดับคนขยันประจำเดือน ${summary.label}`,
+      description: `รอบคะแนนสิ้นสุดแล้ว — เริ่มนับคะแนนใหม่ตั้งแต่ต้นเดือนนี้`,
+      color: 0xd4af37,
+      fields: [
+        ...summary.top.map((r) => ({ name: `#${r.rank} ${r.name}`, value: `${r.points} คะแนน · ผ่าน ${r.approved} งาน · ชนะ ${r.wins}`, inline: false })),
+        { name: "รายงานทั้งหมดในรอบ", value: `${summary.reports} รายงาน`, inline: true }
+      ]
+    });
+    if (!summary.top.length) embed.fields.push({ name: "ยังไม่มีผู้มีคะแนน", value: "รอบนี้ยังไม่มีรายงานที่ได้รับอนุมัติ", inline: false });
+    const target = effectiveWebhook2() || effectiveWebhook();
+    if (target) {
+      const result = await deliverWebhook(target, embed);
+      summary.sent = !!result.ok;
+      summary.error = result.ok ? "" : result.error;
+      if (!result.ok) console.warn(`[discord] สรุปอันดับรายเดือน: ${result.error}`);
+    }
+    saveGangConfig({ cycleMonth: monthKey, cycleStartsAt: monthStart, lastCycle: summary });
+    broadcast("leaderboard:updated", { cycle: monthKey });
+    console.log(`[gang] เริ่มรอบคะแนนใหม่ ${monthKey} (สรุปเดือน ${summary.label})`);
+  } catch (err) {
+    console.warn(`[gang] monthly cycle: ${String((err && err.message) || err)}`);
+  } finally {
+    cycleRunning = false;
+  }
+}
 
 /* คิวส่ง Discord Webhook — retry อัตโนมัติ + กัน rate limit */
 const discordWebhookQueue = [];
 let discordWebhookRunning = false;
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
-function discordEmbed({ title, description, color, fields }) {
+function discordEmbed({ title, description, color, fields, image, thumbnail }) {
   return {
     title: String(title || "").slice(0, 250),
     ...(description ? { description: String(description).slice(0, 3500) } : {}),
     color: color || 0xd4af37,
+    ...(image ? { image: { url: String(image).slice(0, 2000) } } : {}),
+    ...(thumbnail ? { thumbnail: { url: String(thumbnail).slice(0, 2000) } } : {}),
     fields: (fields || [])
       .filter((f) => f && f.name && f.value !== undefined && f.value !== null && String(f.value) !== "")
       .slice(0, 20)
@@ -2010,6 +2164,48 @@ async function sendDiscordEmbedNow(embed) {
   }
 }
 
+/* แจ้งเตือนสมาชิกทาง DM — ทำงานเบื้องหลัง ไม่หน่วงคำตอบของ API
+   ถ้ายังไม่ได้ตั้ง DISCORD_BOT_TOKEN หรือ member ไม่มีดิสคอร์ด จะข้ามอย่างเงียบ ๆ */
+const dmQueue = [];
+let dmRunning = false;
+async function runDmQueue() {
+  if (dmRunning) return;
+  dmRunning = true;
+  try {
+    while (dmQueue.length) {
+      const job = dmQueue.shift();
+      try {
+        const res = await sendDiscordDM(job.discordUser, job.content, job.embed);
+        if (res && res.status !== "sent") console.warn(`[discord] DM ${job.name}: ${res.error || res.status}`);
+      } catch (err) {
+        console.warn(`[discord] DM ${job.name}: ${String((err && err.message) || err)}`);
+      }
+      await sleep(400);
+    }
+  } finally {
+    dmRunning = false;
+  }
+}
+function notifyMembersDM(memberIds, title, lines, options = {}) {
+  if (!DISCORD_BOT_TOKEN) return false;
+  const wanted = new Set((memberIds || []).filter((id) => id !== undefined && id !== null && id !== "").map(String));
+  if (!wanted.size) return false;
+  const seen = new Set();
+  const content = [`**${title}**`, "", ...(lines || []).filter(Boolean), "", "— TWENTYFIVE GANG SYSTEM"].join("\n");
+  const embed = options.image
+    ? discordEmbed({ title, description: (lines || []).filter(Boolean).join("\n"), color: options.color, image: options.image, fields: [] })
+    : null;
+  for (const member of readMembers()) {
+    const key = String(member.id);
+    if (!wanted.has(key) || seen.has(key) || !member.discordUser) continue;
+    seen.add(key);
+    dmQueue.push({ name: member.name, discordUser: member.discordUser, content, embed });
+  }
+  if (dmQueue.length > 200) dmQueue.splice(0, dmQueue.length - 200);
+  if (dmQueue.length) runDmQueue();
+  return seen.size > 0;
+}
+
 /* ---------- Realtime (Server-Sent Events) ---------- */
 const gangEventClients = new Set();
 function broadcast(type, detail = {}) {
@@ -2047,9 +2243,12 @@ function computeLeaderboard({ from = "", to = "", q = "", limit = 0 } = {}) {
   const reports = readReports();
   const allTimePoints = new Map();
   const rangePoints = new Map();
+  const cutoff = pointsCutoffMs();
   for (const entry of scores) {
     const key = String(entry.memberId);
-    allTimePoints.set(key, (allTimePoints.get(key) || 0) + Number(entry.delta || 0));
+    if (!cutoff || new Date(entry.createdAt).getTime() >= cutoff) {
+      allTimePoints.set(key, (allTimePoints.get(key) || 0) + Number(entry.delta || 0));
+    }
     if (inDateRange(entry.createdAt, from, to)) {
       rangePoints.set(key, (rangePoints.get(key) || 0) + Number(entry.delta || 0));
     }
@@ -2057,15 +2256,17 @@ function computeLeaderboard({ from = "", to = "", q = "", limit = 0 } = {}) {
   const stats = new Map();
   for (const report of reports) {
     if (!inDateRange(report.createdAt, from, to)) continue;
-    const key = String(report.memberId);
-    const row = stats.get(key) || { submitted: 0, approved: 0, wins: 0, pending: 0, rejected: 0 };
-    row.submitted += 1;
-    if (report.status === "approved" || report.status === "completed") {
-      row.approved += 1;
-      if (report.result === "won") row.wins += 1;
-    } else if (report.status === "pending") row.pending += 1;
-    else if (report.status === "rejected") row.rejected += 1;
-    stats.set(key, row);
+    for (const participant of reportParticipants(report)) {
+      const key = String(participant.id);
+      const row = stats.get(key) || { submitted: 0, approved: 0, wins: 0, pending: 0, rejected: 0 };
+      row.submitted += 1;
+      if (report.status === "approved" || report.status === "completed") {
+        row.approved += 1;
+        if (report.result === "won") row.wins += 1;
+      } else if (report.status === "pending") row.pending += 1;
+      else if (report.status === "rejected") row.rejected += 1;
+      stats.set(key, row);
+    }
   }
   const useRange = !!(from || to);
   const rows = members.map((member) => {
@@ -2097,8 +2298,8 @@ function computeLeaderboard({ from = "", to = "", q = "", limit = 0 } = {}) {
 
 /* ---------- สถิติสมาชิก ---------- */
 function memberStats(memberId, { from = "", to = "" } = {}) {
-  const reports = readReports().filter((r) => String(r.memberId) === String(memberId) && inDateRange(r.createdAt, from, to));
-  const scores = readScores().filter((s) => String(s.memberId) === String(memberId) && inDateRange(s.createdAt, from, to));
+  const reports = readReports().filter((r) => reportIncludesMember(r, memberId) && inDateRange(r.createdAt, from, to));
+  const scores = readScores().filter((s) => String(s.memberId) === String(memberId) && inDateRange(s.createdAt, from, to) && ((from || to) ? true : inCurrentCycle(s.createdAt)));
   const approved = reports.filter((r) => r.status === "approved" || r.status === "completed");
   return {
     submitted: reports.length,
@@ -2184,9 +2385,7 @@ app.get("/api/gang/members", gangAuth, (req, res) => {
       image: m.image || "",
       points: points.get(String(m.id)) || 0
     }));
-  const members = perms.canViewAll
-    ? all
-    : all.filter((m) => String(m.id) === String(req.gang.memberId));
+  const members = all;
   res.json({ members, canViewAll: perms.canViewAll });
 });
 
@@ -2198,9 +2397,23 @@ function cleanProofUrl(value) {
   }
   return /^https?:\/\//i.test(raw) ? raw : "";
 }
+/* ผู้เข้าร่วมกิจกรรม: เจ้าของรายงาน + ผู้ร่วมเล่น (รองรับรายงานเก่าที่ไม่มี participants) */
+function reportParticipants(report) {
+  const list = Array.isArray(report && report.participants)
+    ? report.participants.filter((p) => p && p.id !== undefined && p.id !== null && p.id !== "")
+    : [];
+  const normalized = list.map((p) => ({ id: p.id, name: p.name || "" }));
+  if (report && !normalized.some((p) => String(p.id) === String(report.memberId))) {
+    normalized.unshift({ id: report.memberId, name: report.memberName || "" });
+  }
+  return normalized;
+}
+function reportIncludesMember(report, memberId) {
+  return reportParticipants(report).some((p) => String(p.id) === String(memberId));
+}
 function recordCounts(perms, memberId) {
   const reports = readReports();
-  const scoped = perms.canViewAll ? reports : reports.filter((r) => String(r.memberId) === String(memberId));
+  const scoped = perms.canViewAll ? reports : reports.filter((r) => reportIncludesMember(r, memberId));
   const counts = { pending: 0, approved: 0, rejected: 0, completed: 0 };
   scoped.forEach((r) => { if (counts[r.status] !== undefined) counts[r.status] += 1; });
   const leaves = readLeaves();
@@ -2218,13 +2431,13 @@ app.get("/api/gang/reports", gangAuth, (req, res) => {
   const perms = permsOf(req.gang);
   const query = req.query || {};
   let list = readReports();
-  if (!perms.canViewAll) list = list.filter((r) => String(r.memberId) === String(req.gang.memberId));
-  else if (query.memberId) list = list.filter((r) => String(r.memberId) === String(query.memberId));
+  if (!perms.canViewAll) list = list.filter((r) => reportIncludesMember(r, req.gang.memberId));
+  else if (query.memberId) list = list.filter((r) => reportIncludesMember(r, query.memberId));
   if (REPORT_STATUSES.includes(query.status)) list = list.filter((r) => r.status === query.status);
   if (ACTIVITY_TYPES.includes(query.type)) list = list.filter((r) => r.type === query.type);
   list = list.filter((r) => inDateRange(r.createdAt, query.from, query.to));
   const keyword = String(query.q || "").trim().toLowerCase();
-  if (keyword) list = list.filter((r) => String(r.memberName || "").toLowerCase().includes(keyword));
+  if (keyword) list = list.filter((r) => `${r.memberName || ""} ${reportParticipants(r).map((p) => p.name).join(" ")}`.toLowerCase().includes(keyword));
   list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const total = list.length;
   const page = Math.max(1, Number(query.page) || 1);
@@ -2256,6 +2469,21 @@ app.post("/api/gang/reports", gangAuth, (req, res) => {
   if (!rateLimit(`report:${member.id}`, 6, 10 * 60 * 1000)) {
     return res.status(429).json({ error: "ส่งรายงานบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่" });
   }
+  /* ผู้ร่วมเล่น: เจ้าของรายงานถูกนับเป็นผู้เข้าร่วมเสมอ */
+  const requestedIds = Array.isArray(body.participantIds) ? body.participantIds : [];
+  const participantIds = [];
+  for (const rawId of [member.id, ...requestedIds]) {
+    if (rawId === undefined || rawId === null || rawId === "") continue;
+    if (!participantIds.some((id) => String(id) === String(rawId))) participantIds.push(rawId);
+  }
+  if (participantIds.length > 20) return res.status(400).json({ error: "เลือกผู้ร่วมเล่นได้ไม่เกิน 20 คนต่อรายงาน" });
+  const participants = [];
+  for (const id of participantIds) {
+    const mate = members.find((m) => String(m.id) === String(id));
+    if (!mate) return res.status(404).json({ error: `ไม่พบสมาชิกผู้ร่วมเล่น (${id})` });
+    if (mate.exitedAt) return res.status(403).json({ error: `${mate.name} ถูกระงับ/ออกจากแก๊งแล้ว` });
+    participants.push({ id: mate.id, name: mate.name });
+  }
   const requestId = cleanLine(body.requestId, 80);
   const reports = readReports();
   if (requestId && reports.some((r) => r.requestId === requestId)) {
@@ -2272,6 +2500,7 @@ app.post("/api/gang/reports", gangAuth, (req, res) => {
     id: makeId("rep"),
     memberId: member.id,
     memberName: member.name,
+    participants,
     type,
     result,
     proofUrl,
@@ -2291,8 +2520,10 @@ app.post("/api/gang/reports", gangAuth, (req, res) => {
   queueDiscord(discordEmbed({
     title: "📝 มีรายงานกิจกรรมใหม่",
     color: 0xe8c56a,
+    image: absoluteUrl(req, proofUrl),
     fields: [
       { name: "สมาชิก", value: `${member.name} (${member.id})`, inline: true },
+      { name: "ผู้ร่วมเล่น", value: participants.length > 1 ? participants.map((p) => p.name).join(", ") : "เล่นคนเดียว", inline: false },
       { name: "กิจกรรม", value: ACTIVITY_LABEL[type], inline: true },
       { name: "ผลลัพธ์", value: ACTIVITY_RESULT_LABEL[result], inline: true },
       { name: "สถานะ", value: REPORT_STATUS_LABEL.pending, inline: true },
@@ -2300,6 +2531,13 @@ app.post("/api/gang/reports", gangAuth, (req, res) => {
       { name: "หลักฐาน", value: proofUrl ? "แนบมาแล้ว" : "ไม่ได้แนบ", inline: true }
     ]
   }));
+  notifyMembersDM(participants.map((p) => p.id), "📝 ส่งรายงานกิจกรรมแล้ว", [
+    `กิจกรรม: ${ACTIVITY_LABEL[type]} (${ACTIVITY_RESULT_LABEL[result]})`,
+    `ผู้ร่วมเล่น: ${participants.map((p) => p.name).join(", ")}`,
+    "สถานะ: รอแอดมินตรวจสอบ",
+    proofUrl ? "แนบหลักฐานแล้ว — ดูรูปได้ในข้อความนี้" : "",
+    "สามารถติดตามผลได้ที่หน้า GANG HUB → รายงานของฉัน"
+  ], { image: absoluteUrl(req, proofUrl), color: 0xe8c56a });
   broadcast("report:new", { reportId: report.id, memberId: member.id, status: report.status });
   res.status(201).json({ ok: true, report });
 });
@@ -2347,33 +2585,42 @@ app.post("/api/gang/reports/:id/review", gangAuth, gangAtLeast(2), (req, res) =>
   const updated = reports[index];
   writeReports(reports);
 
-  /* ให้คะแนนจากรายงานครั้งเดียวเท่านั้น — กันคิดคะแนนซ้ำ */
+  /* ให้คะแนนจากรายงานครั้งเดียวต่อคน — กันคิดคะแนนซ้ำ และให้ทุกคนที่ร่วมเล่น */
   if (action === "approve" && scoreDelta !== 0) {
     const scores = readScores();
-    if (!scores.some((s) => s.reportId === updated.id)) {
+    const participants = reportParticipants(updated);
+    let added = 0;
+    for (const participant of participants) {
+      if (scores.some((s) => s.reportId === updated.id && String(s.memberId) === String(participant.id))) continue;
       scores.unshift({
         id: makeId("score"),
-        memberId: updated.memberId,
-        memberName: updated.memberName,
+        memberId: participant.id,
+        memberName: participant.name,
         delta: scoreDelta,
-        reason: `${ACTIVITY_LABEL[updated.type]} (${ACTIVITY_RESULT_LABEL[updated.result]}) — ${updated.memberName}`,
+        reason: `${ACTIVITY_LABEL[updated.type]} (${ACTIVITY_RESULT_LABEL[updated.result]}) — ${participant.name}`,
         source: "report",
         reportId: updated.id,
         actorId: req.gang.memberId || "admin",
         actorName: req.gang.name,
         createdAt: now
       });
+      added += 1;
+    }
+    if (added) {
       writeScores(scores);
-      broadcast("score:changed", { memberId: updated.memberId, reportId: updated.id });
+      broadcast("score:changed", { memberId: updated.memberId, reportId: updated.id, participants: participants.map((p) => p.id) });
     }
   }
   writeGangAudit(req.gang, `report.${action}`, { type: "report", id: updated.id, name: updated.memberName }, message);
+  const reviewParticipants = reportParticipants(updated);
   queueDiscord(discordEmbed({
     title: action === "reject" ? "❌ รายงานถูกปฏิเสธ" : action === "complete" ? "✅ ปิดงานเรียบร้อย" : "✅ อนุมัติรายงานกิจกรรม",
     color: action === "reject" ? 0xe08a7c : 0x7fe0b0,
     description: message,
+    image: absoluteUrl(req, updated.proofUrl),
     fields: [
       { name: "สมาชิก", value: `${updated.memberName} (${updated.memberId})`, inline: true },
+      { name: "ผู้ร่วมเล่น", value: reviewParticipants.length > 1 ? reviewParticipants.map((p) => p.name).join(", ") : "เล่นคนเดียว", inline: false },
       { name: "กิจกรรม", value: ACTIVITY_LABEL[updated.type], inline: true },
       { name: "ผลลัพธ์", value: ACTIVITY_RESULT_LABEL[updated.result], inline: true },
       { name: "คะแนน", value: `${updated.points}`, inline: true },
@@ -2381,6 +2628,12 @@ app.post("/api/gang/reports/:id/review", gangAuth, gangAtLeast(2), (req, res) =>
       { name: "เวลา", value: thDateTime(now), inline: true }
     ]
   }));
+  notifyMembersDM(reviewParticipants.map((p) => p.id), action === "reject" ? "❌ รายงานกิจกรรมถูกปฏิเสธ" : action === "complete" ? "✅ รายงานกิจกรรมปิดงานแล้ว" : "✅ รายงานกิจกรรมได้รับอนุมัติ", [
+    `กิจกรรม: ${ACTIVITY_LABEL[updated.type]} (${ACTIVITY_RESULT_LABEL[updated.result]})`,
+    `ผู้ร่วมเล่น: ${reviewParticipants.map((p) => p.name).join(", ")}`,
+    action === "reject" ? `เหตุผล: ${updated.reviewNote || "-"}` : `คะแนนที่ได้รับ: ${signedPoints(updated.points)}`,
+    `ผู้ตรวจสอบ: ${req.gang.name}`
+  ], { image: absoluteUrl(req, updated.proofUrl), color: action === "reject" ? 0xe08a7c : 0x7fe0b0 });
   broadcast("report:updated", { reportId: updated.id, memberId: updated.memberId, status: updated.status });
   broadcast("leaderboard:updated", {});
   res.json({ ok: true, report: updated });
@@ -2444,6 +2697,12 @@ app.post("/api/gang/scores", gangAuth, gangAtLeast(3), (req, res) => {
       { name: "เวลา", value: thDateTime(entry.createdAt), inline: true }
     ]
   }));
+  notifyMembersDM([member.id], delta > 0 ? "➕ คุณได้รับคะแนน" : "➖ คะแนนของคุณถูกหัก", [
+    `คะแนน: ${delta > 0 ? "+" : ""}${delta}`,
+    `คะแนนคงเหลือ: ${points}`,
+    `เหตุผล: ${reason}`,
+    `ผู้ดำเนินการ: ${req.gang.name}`
+  ], { color: delta > 0 ? 0x7fe0b0 : 0xe08a7c });
   broadcast("score:changed", { memberId: member.id });
   broadcast("leaderboard:updated", {});
   res.status(201).json({ ok: true, entry, points });
@@ -2474,7 +2733,7 @@ app.get("/api/gang/records/:memberId", gangAuth, (req, res) => {
     .filter((s) => String(s.memberId) === String(memberId))
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const reports = readReports()
-    .filter((r) => String(r.memberId) === String(memberId))
+    .filter((r) => reportIncludesMember(r, memberId))
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const leaves = readLeaves()
     .filter((l) => String(l.memberId) === String(memberId))
@@ -2576,6 +2835,12 @@ app.post("/api/gang/leaves", gangAuth, (req, res) => {
       { name: "เวลา", value: thDateTime(leave.createdAt), inline: true }
     ]
   }));
+  notifyMembersDM([member.id], "🗓️ ส่งคำขอลาแล้ว", [
+    `ประเภท: ${LEAVE_TYPES[type]}`,
+    `ช่วงวันที่: ${startDate} → ${endDate}`,
+    "สถานะ: รอแอดมินตรวจสอบ",
+    `เหตุผล: ${reason}`
+  ], { color: 0xe8c56a });
   broadcast("leave:new", { leaveId: leave.id, memberId: member.id });
   res.status(201).json({ ok: true, leave });
 });
@@ -2614,6 +2879,12 @@ app.post("/api/gang/leaves/:id/review", gangAuth, gangAtLeast(2), (req, res) => 
       { name: "เวลา", value: thDateTime(now), inline: true }
     ]
   }));
+  notifyMembersDM([leave.memberId], action === "approve" ? "✅ คำขอลาได้รับอนุมัติ" : "❌ คำขอลาไม่ได้รับอนุมัติ", [
+    `ประเภท: ${LEAVE_TYPES[leave.type] || leave.type}`,
+    `ช่วงวันที่: ${leave.startDate} → ${leave.endDate}`,
+    leave.reviewNote ? `หมายเหตุ: ${leave.reviewNote}` : "",
+    `ผู้ตรวจสอบ: ${req.gang.name}`
+  ], { color: action === "approve" ? 0x7fe0b0 : 0xe08a7c });
   broadcast("leave:updated", { leaveId: leave.id, memberId: leave.memberId });
   res.json({ ok: true, leave });
 });
@@ -2669,6 +2940,11 @@ app.post("/api/gang/behavior", gangAuth, gangAtLeast(3), (req, res) => {
       { name: "เวลา", value: thDateTime(entry.createdAt), inline: true }
     ]
   }));
+  notifyMembersDM([member.id], kind === "warning" ? "⚠️ คุณได้รับการเตือน" : "📌 มีบันทึกความประพฤติใหม่", [
+    `หัวข้อ: ${entry.title}`,
+    `รายละเอียด: ${detail}`,
+    `ผู้แจ้ง: ${req.gang.name}`
+  ], { color: kind === "warning" ? 0xe8c56a : 0x9a9aa3 });
   broadcast("behavior:new", { behaviorId: entry.id, memberId: member.id });
   res.status(201).json({ ok: true, entry });
 });
@@ -2690,7 +2966,8 @@ app.get("/api/gang/overview", gangAuth, (req, res) => {
   const reports = readReports();
   const leaves = readLeaves();
   const members = readMembers().filter((m) => !m.exitedAt);
-  const scores = readScores();
+  const cutoff = pointsCutoffMs();
+  const scores = readScores().filter((s) => !cutoff || new Date(s.createdAt).getTime() >= cutoff);
   const leaderboard = computeLeaderboard({ limit: 5 });
   res.json({
     members: members.length,
@@ -2723,6 +3000,13 @@ app.get("/api/gang/admin/config", gangAuth, gangAtLeast(4), (req, res) => {
   res.json({
     points: config.points,
     webhook: webhookStatus(),
+    webhook2: webhook2Status(),
+    cycle: {
+      month: config.cycleMonth,
+      label: bkkMonthLabel(config.cycleMonth),
+      startsAt: config.cycleStartsAt,
+      lastCycle: config.lastCycle
+    },
     sheets: sheetsSummary(),
     defaults: DEFAULT_GANG_POINTS,
     updatedAt: config.updatedAt
@@ -2743,13 +3027,21 @@ app.put("/api/gang/admin/config", gangAuth, gangAtLeast(4), (req, res) => {
   if (body.clearWebhook) webhookUrl = "";
   else if (body.webhookUrl !== undefined) {
     const url = String(body.webhookUrl || "").trim();
-    if (url && !/^https:\/\/(?:discord|discordapp|ptb\.discord|canary\.discord)\.com\/api\/(?:v\d+\/)?webhooks\/\d+\/[\w-]+$/i.test(url)) {
-      return res.status(400).json({ error: "ลิงก์ Discord Webhook ไม่ถูกต้อง" });
-    }
+    if (!validWebhookUrl(url)) return res.status(400).json({ error: "ลิงก์ Discord Webhook ไม่ถูกต้อง" });
     webhookUrl = url;
   }
-  const saved = saveGangConfig({ points, webhookUrl });
-  const configDetail = webhookUrl !== current.webhookUrl ? "อัปเดตคะแนนและ Discord Webhook" : "อัปเดตคะแนนกิจกรรม";
+  let webhookUrl2 = current.webhookUrl2;
+  if (body.clearWebhook2) webhookUrl2 = "";
+  else if (body.webhookUrl2 !== undefined) {
+    const url = String(body.webhookUrl2 || "").trim();
+    if (!validWebhookUrl(url)) return res.status(400).json({ error: "ลิงก์ Discord Webhook อันที่ 2 ไม่ถูกต้อง" });
+    webhookUrl2 = url;
+  }
+  const changed = [];
+  if (webhookUrl !== current.webhookUrl) changed.push("Webhook หลัก");
+  if (webhookUrl2 !== current.webhookUrl2) changed.push("Webhook สรุปอันดับ");
+  const saved = saveGangConfig({ points, webhookUrl, webhookUrl2 });
+  const configDetail = changed.length ? `อัปเดตคะแนนและ ${changed.join(", ")}` : "อัปเดตคะแนนกิจกรรม";
   writeGangAudit(req.gang, "config.update", { type: "config", id: "gangConfig", name: "ตั้งค่าระบบ" }, configDetail);
   queueDiscord(discordEmbed({
     title: "⚙️ อัปเดตการตั้งค่าระบบแก๊ง",
@@ -2761,7 +3053,7 @@ app.put("/api/gang/admin/config", gangAuth, gangAtLeast(4), (req, res) => {
     ]
   }));
   broadcast("config:updated", {});
-  res.json({ ok: true, points: saved.points, webhook: webhookStatus(), updatedAt: saved.updatedAt });
+  res.json({ ok: true, points: saved.points, webhook: webhookStatus(), webhook2: webhook2Status(), updatedAt: saved.updatedAt });
 });
 app.post("/api/gang/admin/discord/test", gangAuth, gangAtLeast(4), async (req, res) => {
   const result = await sendDiscordEmbedNow(discordEmbed({
@@ -2792,6 +3084,10 @@ app.post("/api/gang/admin/members/:id/role", gangAuth, gangAtLeast(4), (req, res
       { name: "เวลา", value: thDateTime(new Date().toISOString()), inline: true }
     ]
   }));
+  notifyMembersDM([members[index].id], "👤 ตำแหน่งของคุณถูกอัปเดต", [
+    `ตำแหน่งใหม่: ${GANG_ROLE_LABEL[role]}`,
+    `ผู้ดำเนินการ: ${req.gang.name}`
+  ], { color: 0xd4af37 });
   broadcast("member:updated", { memberId: members[index].id });
   res.json({ ok: true, member: publicMember(members[index]) });
 });
@@ -2852,6 +3148,9 @@ async function startServer() {
       new Promise((resolve) => { const t = setTimeout(resolve, 30000); if (t.unref) t.unref(); })
     ]);
   } catch (err) { console.warn(`[backup] ${err.message}`); }
+  ensureMonthlyCycle().catch(() => {});   // ตัดยอดอันดับรายเดือนอัตโนมัติ (เวลาไทย)
+  const cycleTimer = setInterval(() => { ensureMonthlyCycle().catch(() => {}); }, 30 * 60 * 1000);
+  if (cycleTimer.unref) cycleTimer.unref();
   startSheetKeepalive();   // ผลักข้อมูลขึ้นชีตทันที + ส่งต่อเนื่องเป็นรอบ ๆ เอง
   app.listen(PORT, () => console.log(`TWENTYFIVE running on http://localhost:${PORT}`));
 }

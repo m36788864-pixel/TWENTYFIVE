@@ -334,6 +334,19 @@ table.data tr.me{background:rgba(230,192,90,.07);box-shadow:inset 3px 0 0 var(--
 .pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;font-size:11.5px;color:var(--muted)}
 .link-btn{border:0;background:transparent;color:var(--gold-strong);font:600 12px Kanit;padding:0;text-decoration:underline;text-underline-offset:3px}
 
+/* ---------- PARTICIPANTS / TIME ---------- */
+.participant-box{display:flex;flex-direction:column;gap:9px}
+.participant-chips{display:flex;flex-wrap:wrap;gap:7px;min-height:0}
+.participant-chip{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border-radius:999px;border:1px solid rgba(230,192,90,.35);background:var(--gold-dim);color:var(--gold-strong);font-size:11.5px;font-weight:600}
+.participant-chip.owner{border-color:rgba(127,224,176,.35);background:var(--ok-dim);color:#b9f3d6}
+.participant-chip button{border:0;background:transparent;color:inherit;font-size:14px;line-height:1;padding:0 0 0 2px;opacity:.72}
+.participant-chip button:hover{opacity:1}
+.participant-empty{font-size:11px;color:var(--muted);padding:4px 2px}
+.time-ago{color:var(--gold-strong);font-weight:600;white-space:nowrap}
+.cycle-top{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.018);font-size:12px}
+.cycle-top b{font:700 11px Orbitron;color:var(--gold-strong);width:34px}
+.cycle-top span{color:var(--muted);margin-left:auto;font-size:11px}
+
 /* ---------- RESPONSIVE ---------- */
 @media (max-width:1040px){
   .login-wrap{grid-template-columns:1fr;gap:30px;min-height:0;padding-top:10px}
